@@ -15,8 +15,12 @@
   },
   "dependencies": {
     "@nuxt/eslint": "^1.4.1",
+    "@nuxtjs/tailwindcss": "^7.0.0-beta.0",
+    "nanoid": "^5.1.5",
     "nuxt": "^3.17.5",
-    "vue": "latest"
+    "unique-names-generator": "^4.7.1",
+    "vue": "latest",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "eslint-config-prettier": "^10.1.5",
