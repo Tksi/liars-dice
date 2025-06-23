@@ -1,25 +1,26 @@
+import { nanoid } from 'nanoid';
 import { animals, colors, uniqueNamesGenerator } from 'unique-names-generator';
-import { rooms } from '../state/rooms';
+import { addRoom } from '~/server/state/rooms';
 
 export default defineEventHandler(() => {
   const roomName = uniqueNamesGenerator({
     dictionaries: [colors, animals],
-    separator: ' ',
+    separator: '-',
     style: 'capital',
   });
 
-  const roomId = crypto.randomUUID();
   const room = {
-    id: roomId,
+    id: `${roomName}@${nanoid(4)}`,
     name: roomName,
     createdAt: Date.now(),
+    status: 'waiting' as const,
     users: new Map(),
   };
 
-  rooms.set(roomId, room);
+  addRoom(room);
 
   return {
-    id: roomId,
+    id: room.id,
     name: room.name,
     createdAt: room.createdAt,
     userCount: 0,

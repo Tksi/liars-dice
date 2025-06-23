@@ -33,11 +33,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### ディレクトリ構造
 
-- `pages/` - ページコンポーネント（現在はindex.vueのみ）
+- `pages/` - ページコンポーネント
+  - `pages/index.vue` - ルーム一覧ページ
+  - `pages/[roomId]/index.vue` - ルーム詳細ページ（SSE接続デバッグ用）
 - `server/` - サーバーサイド関連
   - `server/api/` - APIエンドポイント
   - `server/state/` - インメモリ状態管理
+  - `server/lib/` - サーバーサイドユーティリティ
 - `public/` - 静的ファイル
+- `components/` - 再利用可能なVueコンポーネント
+- `types/` - TypeScript型定義
 
 ### TypeScript設定
 
@@ -67,20 +72,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - default exportは設定ファイル、middleware、plugins、server、pagesでのみ許可
 - classは使用しない
 - バリデーションが必要な場合はzodを使用
-- idやUUIDの生成にはnanoid(8)を使用
+- idやUUIDの生成にはnanoid(4)を使用
 - スタイルにはTailwind CSSを使用
+- lodash-esのdebounce機能を使用（ブロードキャスト制御）
 
 ## 現在の実装状況
 
 ### ✅ 実装済み機能
 
 #### フロントエンド
+
 - ユーザー名登録・保存（localStorage）
 - ルーム一覧表示・自動更新（1秒間隔）
 - ルーム作成機能
+- **ルームページ**: SSE接続によるリアルタイム通信（デバッグ用UI付き）
 - レスポンシブデザイン（Tailwind CSS）
 
 #### コンポーネント
+
 - `AppBar` - アプリケーションヘッダー
 - `EmptyState` - 空状態表示
 - `IconButton` - アイコンボタン
@@ -88,27 +97,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `UserCard` - ユーザー情報カード
 
 #### サーバーサイド
-- インメモリ状態管理（`server/state/rooms.ts`）
-- `GET /api/rooms` - ルーム一覧取得
-- `POST /api/rooms` - 新規ルーム作成（unique-names-generatorでランダム名生成）
+
+- **インメモリ状態管理**: Proxy化によるリアルタイム変更検知・ブロードキャスト
+- **SSEによるリアルタイム通信**: ハートビート、自動切断、重複接続処理
+- **APIエンドポイント**:
+  - `GET /api/rooms` - ルーム一覧取得
+  - `POST /api/rooms` - 新規ルーム作成（unique-names-generatorでランダム名生成）
+  - `GET /api/rooms/[roomId]/[userId]` - SSE接続によるルーム参加
+- **エラーハンドリング**: Zodバリデーションエラー統一処理
 
 ### ❌ 未実装機能
 
-- **ルーム参加**: `joinRoom`関数はTODOコメントのみ
-- **SSE実装**: `GET /api/rooms/[roomId]`は基本的なストリーム作成のみ
 - **ゲームロジック**: ライアーズダイスのルール実装なし
-- **リアルタイム通信**: プレイヤー間の実際の通信機能なし
+- **ゲーム状態管理**: サイコロ、ベット、チャレンジ機能なし
+- **ゲームUI**: 実際のゲームプレイ画面なし
+- **プレイヤー管理**: ルーム内でのプレイヤー順序、ターン管理なし
 
 ### ⚠️ 技術的課題
 
-#### 依存関係の不足
-ESLint設定で使用しているが、package.jsonに含まれていない依存関係：
-- `@stylistic/eslint-plugin`
-- `@typescript-eslint/eslint-plugin`
-- `@typescript-eslint/parser`
-- `eslint-plugin-unicorn`
-
 #### 型定義の不整合
+
 - `/types/index.ts`の`Room`型とサーバーサイドの`Room`型が異なる
 - フロントエンドとサーバーサイドで共通の型定義が必要
 
@@ -116,15 +124,21 @@ ESLint設定で使用しているが、package.jsonに含まれていない依�
 
 ### 状態管理
 
-- **インメモリ状態**: `server/state/rooms.ts`でMap構造を使用
-- **リアルタイム通信**: Server-Sent Events (SSE) 準備済み（未完成）
-- **状態の型定義**: User、Room型でルーム・ユーザー情報を管理
+- **Proxy化されたMap構造**: 状態変更の自動検知とブロードキャスト
+- **デバウンス機能**: 10ms間隔で重複ブロードキャストを防止
+- **リアルタイム同期**: ルーム状態変更時の全参加者への自動通知
+- **状態の型定義**:
+  - `User` - ストリーム接続を含むユーザー情報
+  - `Room` - ユーザーMap、ステータス、メタデータを管理
 
 ### APIエンドポイント
 
 - `GET /api/rooms` - ルーム一覧取得
 - `POST /api/rooms` - 新規ルーム作成（unique-names-generatorでランダム名生成）
-- `GET /api/rooms/[roomId]` - SSE接続準備（実装途中）
+- `GET /api/rooms/[roomId]/[userId]` - SSE接続によるルーム参加
+  - ハートビート機能（10秒間隔）
+  - 重複接続の自動切断
+  - 接続切断時の自動クリーンアップ
 
 ### 制限事項
 

@@ -33,7 +33,7 @@ const promptUserName = (): void => {
 
   if (userName !== null && userName.trim() !== '') {
     const newUser: User = {
-      id: `user${nanoid(8)}`,
+      id: `${userName.trim()}@${nanoid(4)}`,
       name: userName.trim(),
     };
 
@@ -75,7 +75,7 @@ const createRoom = async (): Promise<void> => {
  */
 const joinRoom = (roomId: string): void => {
   console.info('ルーム参加:', roomId);
-  // TODO: ルーム参加処理を実装
+  void navigateTo(`/${roomId}`);
 };
 
 // コンポーネントマウント時の処理
