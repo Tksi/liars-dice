@@ -89,7 +89,10 @@ onUnmounted(() => {
 
     <div class="container mx-auto px-4 py-8">
       <!-- Room Header -->
-      <div class="bg-gray-800 mb-8 p-6 rounded-lg shadow-lg">
+      <div
+        class="bg-gray-800 mb-8 p-6 rounded-lg shadow-lg"
+        :style="{ viewTransitionName: 'room-name' }"
+      >
         <div class="flex items-center justify-between mb-4">
           <h1 class="font-bold text-2xl text-gray-100">
             ルーム: {{ room?.name }}

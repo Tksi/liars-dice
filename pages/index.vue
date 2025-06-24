@@ -121,6 +121,7 @@ onMounted(() => {
             v-if="rooms.length > 0"
             v-auto-animate
             class="divide-gray-600 divide-y"
+            :style="{ viewTransitionName: 'room-name' }"
           >
             <RoomCard
               v-for="room in rooms"

@@ -11,6 +11,7 @@ export default defineNuxtConfig({
   ssr: false,
   experimental: {
     typedPages: true,
+    viewTransition: true,
   },
   app: {
     head: {
