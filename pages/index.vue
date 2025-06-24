@@ -62,7 +62,11 @@ onMounted(() => {
     <AppBar />
 
     <div class="container mx-auto px-4 py-8">
-      <UserCard v-if="localUser" :local-user="localUser" />
+      <UserCard
+        v-if="localUser"
+        :local-user="localUser"
+        :style="{ viewTransitionName: 'user-name' }"
+      />
 
       <div class="max-w-4xl mb-8 mx-auto">
         <IconButton
@@ -121,7 +125,6 @@ onMounted(() => {
             v-if="rooms.length > 0"
             v-auto-animate
             class="divide-gray-600 divide-y"
-            :style="{ viewTransitionName: 'room-name' }"
           >
             <RoomCard
               v-for="room in rooms"

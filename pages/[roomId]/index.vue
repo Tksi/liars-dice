@@ -95,7 +95,7 @@ onUnmounted(() => {
       >
         <div class="flex items-center justify-between mb-4">
           <h1 class="font-bold text-2xl text-gray-100">
-            ルーム: {{ room?.name }}
+            {{ room?.name }}
           </h1>
           <NuxtLink
             class="bg-gray-700 hover:bg-gray-600 hover:text-white px-4 py-2 rounded-lg text-gray-300 transition-colors"
@@ -149,6 +149,10 @@ onUnmounted(() => {
             v-for="user in Object.values(room.users)"
             :key="user.id"
             class="bg-gray-700 p-4 rounded-lg"
+            :style="{
+              viewTransitionName:
+                user.id === localUser.id ? 'user-name' : undefined,
+            }"
           >
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-3">

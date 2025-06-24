@@ -29,6 +29,7 @@ defineOptions({
  * ルームに参加
  */
 const handleJoin = (): void => {
+  viewTransitionName.value = 'room-name';
   emit('join', room.id);
 };
 
@@ -45,11 +46,14 @@ const formatDate = (timestamp: number): string => {
     minute: '2-digit',
   });
 };
+
+const viewTransitionName = ref<string>();
 </script>
 
 <template>
   <div
     class="cursor-pointer duration-200 focus-within:bg-gray-700 group hover:bg-gray-700 p-6 transition-colors"
+    :style="{ viewTransitionName: viewTransitionName }"
     tabindex="0"
     @click="() => handleJoin()"
     @keydown.enter="() => handleJoin()"
@@ -95,7 +99,6 @@ const formatDate = (timestamp: number): string => {
             <span class="font-medium text-gray-100 text-lg">{{
               Object.keys(room.users).length
             }}</span>
-            <span class="text-gray-400 text-sm">人参加中</span>
           </div>
         </div>
         <div
