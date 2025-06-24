@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Room } from '~/types';
 
-const { user } = useUser();
+const { localUser } = useLocalUser();
 const rooms = ref<Room[]>([]);
 const isCreatingRoom = ref(false);
 
@@ -62,30 +62,7 @@ onMounted(() => {
     <AppBar />
 
     <div class="container mx-auto px-4 py-8">
-      <!-- Hero Section -->
-      <div class="bg-gray-800 mb-8 p-8 rounded-lg shadow-lg text-center">
-        <div class="mb-6">
-          <div
-            class="bg-indigo-900 flex h-16 items-center justify-center mb-4 mx-auto rounded-full w-16"
-          >
-            <svg
-              class="h-8 text-indigo-300 w-8"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
-              />
-            </svg>
-          </div>
-          <h2 class="font-medium mb-2 text-3xl text-gray-100">
-            心理戦が熱い、究極のブラフゲーム
-          </h2>
-          <p class="text-gray-300">プレイヤー同士の駆け引きを楽しもう</p>
-        </div>
-      </div>
-
-      <UserCard v-if="user" :user="user" />
+      <UserCard v-if="localUser" :local-user="localUser" />
 
       <div class="max-w-4xl mb-8 mx-auto">
         <IconButton

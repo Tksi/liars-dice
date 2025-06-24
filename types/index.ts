@@ -1,17 +1,22 @@
-/**
- * ユーザー情報の型定義
- */
-export type User = {
+import type { EventStream } from 'h3';
+
+export type ServerUser = {
   id: string;
+  stream: EventStream;
   name: string;
+  isMyTurn: boolean;
+  dice: number[];
 };
 
-/**
- * ルーム情報の型定義
- */
-export type Room = {
+export type ServerRoom = {
   id: string;
   name: string;
   createdAt: number;
-  userCount: number;
+  users: Map<string, ServerUser>;
+};
+
+export type User = Omit<ServerUser, 'stream'>;
+
+export type Room = Omit<ServerRoom, 'users'> & {
+  users: Record<string, User>;
 };

@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import type { User } from '~/types';
-
 /**
  * Props
  */
 type Props = {
-  user: User;
+  localUser: LocalUser;
 };
 
 defineProps<Props>();
@@ -37,7 +35,7 @@ defineOptions({
         </div>
         <div>
           <p class="text-gray-400 text-sm">プレイヤー</p>
-          <p class="font-medium text-gray-100 text-lg">{{ user.name }}</p>
+          <p class="font-medium text-gray-100 text-lg">{{ localUser.name }}</p>
         </div>
       </div>
     </div>

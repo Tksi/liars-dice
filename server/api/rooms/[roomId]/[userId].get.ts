@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
 
     room.users.set(userId, {
       id: userId,
+      name: userId.slice(0, userId.lastIndexOf('@')),
       stream,
       isMyTurn: false,
       dice: [],

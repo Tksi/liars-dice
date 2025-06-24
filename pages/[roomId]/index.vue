@@ -2,45 +2,40 @@
 const route = useRoute('roomId');
 const roomId = route.params.roomId;
 
-const { user } = useUser();
+const { localUser } = useLocalUser();
 const connectionStatus = ref<
   'connected' | 'connecting' | 'disconnected' | 'error'
 >('connecting');
 const eventSource = ref<EventSource | null>(null);
-const messages = ref<string[]>([]);
 
 /**
  * EventSourceでSSE接続を開始
  */
 const connectToRoom = (): void => {
-  const url = `/api/rooms/${roomId}/${user.value.id}`;
+  const url = `/api/rooms/${roomId}/${localUser.value.id}`;
 
   eventSource.value = new EventSource(url);
 
   eventSource.value.addEventListener('open', () => {
     connectionStatus.value = 'connected';
-    messages.value.push(
-      `[${new Date().toLocaleTimeString()}] 接続が確立されました`,
-    );
+    console.info(`[${new Date().toLocaleTimeString()}] 接続が確立されました`);
   });
 
   eventSource.value.addEventListener('error', () => {
     connectionStatus.value = 'error';
-    messages.value.push(
+    console.error(
       `[${new Date().toLocaleTimeString()}] 接続エラーが発生しました`,
     );
   });
 
   eventSource.value.addEventListener('close', () => {
     connectionStatus.value = 'disconnected';
-    messages.value.push(
-      `[${new Date().toLocaleTimeString()}] 接続が切断されました`,
-    );
+    console.info(`[${new Date().toLocaleTimeString()}] 接続が切断されました`);
     disconnect();
   });
 
   eventSource.value.addEventListener('heartbeat', () => {
-    messages.value.push(
+    console.debug(
       `[${new Date().toLocaleTimeString()}] ハートビートを受信しました`,
     );
   });
@@ -51,15 +46,13 @@ const connectToRoom = (): void => {
 
   eventSource.value.addEventListener('update', (event: { data: string }) => {
     const timestamp = new Date().toLocaleTimeString();
-    messages.value.push(`[${timestamp}] メッセージを受信: ${event.data}`);
+    console.info(`[${timestamp}] メッセージを受信: ${event.data}`);
 
     try {
       const data = JSON.parse(event.data) as Record<string, unknown>;
-      messages.value.push(
-        `[${timestamp}] パース済みデータ: ${JSON.stringify(data, null, 2)}`,
-      );
+      console.info(`[${timestamp}] パース済みデータ:`, data);
     } catch {
-      messages.value.push(`[${timestamp}] JSON パースに失敗しました`);
+      console.error(`[${timestamp}] JSON パースに失敗しました`);
     }
   });
 };
@@ -72,17 +65,8 @@ const disconnect = (): void => {
     eventSource.value.close();
     eventSource.value = null;
     connectionStatus.value = 'disconnected';
-    messages.value.push(
-      `[${new Date().toLocaleTimeString()}] 接続を切断しました`,
-    );
+    console.info(`[${new Date().toLocaleTimeString()}] 接続を切断しました`);
   }
-};
-
-/**
- * メッセージをクリア
- */
-const clearMessages = (): void => {
-  messages.value = [];
 };
 
 onMounted(() => {
@@ -136,66 +120,8 @@ onUnmounted(() => {
             </span>
           </div>
 
-          <div v-if="user" class="text-gray-400">
-            プレイヤー: {{ user.name }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Debug Panel -->
-      <div class="bg-gray-800 overflow-hidden rounded-lg shadow-lg">
-        <div class="bg-gray-700 border-b border-gray-600 px-6 py-4">
-          <div class="flex items-center justify-between">
-            <h2 class="font-medium text-gray-100 text-lg">
-              デバッグコンソール
-            </h2>
-            <div class="flex space-x-2">
-              <button
-                class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded text-sm text-white transition-colors"
-                @click="() => clearMessages()"
-              >
-                クリア
-              </button>
-              <button
-                v-if="
-                  connectionStatus === 'disconnected' ||
-                  connectionStatus === 'error'
-                "
-                class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm text-white transition-colors"
-                @click="() => connectToRoom()"
-              >
-                再接続
-              </button>
-              <button
-                v-if="connectionStatus === 'connected'"
-                class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm text-white transition-colors"
-                @click="() => disconnect()"
-              >
-                切断
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-6">
-          <div
-            v-if="messages.length === 0"
-            class="py-8 text-center text-gray-500"
-          >
-            まだメッセージがありません
-          </div>
-
-          <div
-            v-else
-            class="bg-gray-900 font-mono max-h-96 overflow-y-auto p-4 rounded-lg text-sm"
-          >
-            <div
-              v-for="(message, index) in messages"
-              :key="index"
-              class="mb-2 text-gray-300 whitespace-pre-wrap"
-            >
-              {{ message }}
-            </div>
+          <div v-if="localUser" class="text-gray-400">
+            プレイヤー: {{ localUser.name }}
           </div>
         </div>
       </div>

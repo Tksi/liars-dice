@@ -1,20 +1,5 @@
 import { debounce } from 'lodash-es';
-import type { EventStream } from 'h3';
-
-type User = {
-  id: string;
-  stream: EventStream;
-  isMyTurn: boolean;
-  dice: number[];
-};
-
-type Room = {
-  id: string;
-  name: string;
-  createdAt: number;
-  users: Map<string, User>;
-};
-
+import type { ServerRoom } from '~/types';
 // ブロードキャストのデバウンス設定
 const BROADCAST_DEBOUNCE_MS = 10;
 
@@ -66,7 +51,7 @@ const createMapProxy = <K, V>(
  * @param roomId ルームID
  * @returns Proxy化されたRoomオブジェクト
  */
-const createRoomProxy = (room: Room, roomId: string): Room => {
+const createRoomProxy = (room: ServerRoom, roomId: string): ServerRoom => {
   // ルーム毎にdebounce関数を作成(主に、同じuserIdが接続したときの削除、追加処理で2回発火するのを防ぐため)
   const debouncedBroadcast = debounce(() => {
     void broadcastToRoom(roomId);
@@ -92,7 +77,7 @@ const createRoomProxy = (room: Room, roomId: string): Room => {
   );
 };
 
-export const rooms = new Map<string, Room>();
+export const rooms = new Map<string, ServerRoom>();
 
 /**
  * ルームに参加している全ユーザーにブロードキャストする
@@ -124,7 +109,7 @@ const broadcastToRoom = (roomId: string) => {
  * @param room 作成するRoomオブジェクト
  * @returns Proxy化されたRoomオブジェクト
  */
-export const addRoom = (room: Room): Room => {
+export const addRoom = (room: ServerRoom): ServerRoom => {
   const proxiedRoom = createRoomProxy(room, room.id);
 
   rooms.set(room.id, proxiedRoom);

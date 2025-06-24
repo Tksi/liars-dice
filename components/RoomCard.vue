@@ -93,7 +93,7 @@ const formatDate = (timestamp: number): string => {
               />
             </svg>
             <span class="font-medium text-gray-100 text-lg">{{
-              room.userCount
+              Object.keys(room.users).length
             }}</span>
             <span class="text-gray-400 text-sm">人参加中</span>
           </div>
