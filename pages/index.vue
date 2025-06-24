@@ -1,46 +1,9 @@
 <script setup lang="ts">
-import { nanoid } from 'nanoid';
-import type { Room, User } from '~/types';
+import type { Room } from '~/types';
 
-const user = ref<User | null>(null);
+const { user } = useUser();
 const rooms = ref<Room[]>([]);
 const isCreatingRoom = ref(false);
-
-/**
- * ローカルストレージからユーザー情報を読み込む
- */
-const loadUser = (): void => {
-  if (globalThis.window === undefined) return;
-
-  const savedUser = localStorage.getItem('liars-dice-user');
-
-  if (savedUser !== null && savedUser.trim() !== '') {
-    try {
-      user.value = JSON.parse(savedUser) as User;
-    } catch {
-      localStorage.removeItem('liars-dice-user');
-    }
-  }
-};
-
-/**
- * ユーザー名を入力させる
- */
-const promptUserName = (): void => {
-  if (globalThis.window === undefined) return;
-
-  const userName = globalThis.prompt('プレイヤー名を入力してください:');
-
-  if (userName !== null && userName.trim() !== '') {
-    const newUser: User = {
-      id: `${userName.trim()}@${nanoid(4)}`,
-      name: userName.trim(),
-    };
-
-    user.value = newUser;
-    localStorage.setItem('liars-dice-user', JSON.stringify(newUser));
-  }
-};
 
 /**
  * ルーム一覧を取得
@@ -80,12 +43,6 @@ const joinRoom = (roomId: string): void => {
 
 // コンポーネントマウント時の処理
 onMounted(() => {
-  loadUser();
-
-  while (!user.value) {
-    promptUserName();
-  }
-
   void loadRooms();
 
   // 1秒ごとにルーム一覧を更新

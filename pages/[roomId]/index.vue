@@ -1,32 +1,13 @@
 <script setup lang="ts">
-import type { User } from '~/types';
-
 const route = useRoute('roomId');
 const roomId = route.params.roomId;
 
-const user = ref<User | null>(null);
+const { user } = useUser();
 const connectionStatus = ref<
   'connected' | 'connecting' | 'disconnected' | 'error'
 >('connecting');
 const eventSource = ref<EventSource | null>(null);
 const messages = ref<string[]>([]);
-
-/**
- * ローカルストレージからユーザー情報を読み込む
- */
-const loadUser = (): void => {
-  if (globalThis.window === undefined) return;
-
-  const savedUser = localStorage.getItem('liars-dice-user');
-
-  if (savedUser !== null && savedUser.trim() !== '') {
-    try {
-      user.value = JSON.parse(savedUser) as User;
-    } catch {
-      localStorage.removeItem('liars-dice-user');
-    }
-  }
-};
 
 /**
  * EventSourceでSSE接続を開始
@@ -103,8 +84,6 @@ const clearMessages = (): void => {
 };
 
 onMounted(() => {
-  loadUser();
-
   if (user.value) {
     connectToRoom();
   }
