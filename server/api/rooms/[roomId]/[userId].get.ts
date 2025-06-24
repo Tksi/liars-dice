@@ -6,8 +6,8 @@ import { rooms } from '~/server/state/rooms';
  */
 export default defineEventHandler(async (event) => {
   const stream = createEventStream(event);
-  const roomId = event.context.params!.roomId!;
-  const userId = event.context.params!.userId!;
+  const roomId = decodeURIComponent(event.context.params!.roomId!);
+  const userId = decodeURIComponent(event.context.params!.userId!);
   const room = rooms.get(roomId);
 
   if (room) {
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     }, 10_000);
 
     room.users.set(userId, {
-      id: userId,
+      id: decodeURIComponent(userId),
       name: userId.slice(0, userId.lastIndexOf('@')),
       stream,
       isMyTurn: false,

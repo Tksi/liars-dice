@@ -1,4 +1,5 @@
 import { debounce } from 'lodash-es';
+import { replacer } from '../lib/replacer';
 import type { ServerRoom } from '~/types';
 // ブロードキャストのデバウンス設定
 const BROADCAST_DEBOUNCE_MS = 10;
@@ -94,11 +95,7 @@ const broadcastToRoom = (roomId: string) => {
       .map((user) => {
         return user.stream.push({
           event: 'update',
-          data: JSON.stringify(room, (_, value: unknown): unknown => {
-            if (value instanceof Map) return Object.fromEntries(value);
-
-            return value;
-          }),
+          data: JSON.stringify(room, replacer),
         });
       }),
   );

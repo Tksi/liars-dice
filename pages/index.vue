@@ -117,7 +117,11 @@ onMounted(() => {
             title="まだルームがありません"
           />
 
-          <div v-if="rooms.length > 0" class="divide-gray-600 divide-y">
+          <div
+            v-if="rooms.length > 0"
+            v-auto-animate
+            class="divide-gray-600 divide-y"
+          >
             <RoomCard
               v-for="room in rooms"
               :key="room.id"

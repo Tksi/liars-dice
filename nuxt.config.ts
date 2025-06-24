@@ -1,6 +1,11 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint', '@nuxtjs/tailwindcss', '@nuxtjs/robots'],
+  modules: [
+    '@nuxt/eslint',
+    '@nuxtjs/tailwindcss',
+    '@nuxtjs/robots',
+    '@formkit/auto-animate/nuxt',
+  ],
   compatibilityDate: '2024-12-26',
   devtools: { enabled: false },
   ssr: false,

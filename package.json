@@ -14,6 +14,7 @@
     "fix": "prettier . --cache --write --log-level warn --ignore-path .gitignore; npm run lint:check -- --fix; npm run type:check"
   },
   "dependencies": {
+    "@formkit/auto-animate": "^0.8.2",
     "@nuxt/eslint": "^1.4.1",
     "@nuxtjs/robots": "^5.2.11",
     "@nuxtjs/tailwindcss": "^7.0.0-beta.0",
