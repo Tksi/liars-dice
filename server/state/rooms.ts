@@ -4,13 +4,14 @@ import type { EventStream } from 'h3';
 type User = {
   id: string;
   stream: EventStream;
+  isMyTurn: boolean;
+  dice: number[];
 };
 
 type Room = {
   id: string;
   name: string;
   createdAt: number;
-  status: 'playing' | 'waiting';
   users: Map<string, User>;
 };
 
@@ -97,7 +98,7 @@ export const rooms = new Map<string, Room>();
  * ルームに参加している全ユーザーにブロードキャストする
  * @param roomId ルームID
  */
-export const broadcastToRoom = (roomId: string) => {
+const broadcastToRoom = (roomId: string) => {
   const room = rooms.get(roomId);
   if (!room) return;
 

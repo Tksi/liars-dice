@@ -13,8 +13,6 @@ const messages = ref<string[]>([]);
  * EventSourceでSSE接続を開始
  */
 const connectToRoom = (): void => {
-  if (!user.value) return;
-
   const url = `/api/rooms/${roomId}/${user.value.id}`;
 
   eventSource.value = new EventSource(url);
@@ -45,6 +43,10 @@ const connectToRoom = (): void => {
     messages.value.push(
       `[${new Date().toLocaleTimeString()}] ハートビートを受信しました`,
     );
+  });
+
+  eventSource.value.addEventListener('404', () => {
+    void navigateTo('/');
   });
 
   eventSource.value.addEventListener('update', (event: { data: string }) => {
@@ -84,9 +86,7 @@ const clearMessages = (): void => {
 };
 
 onMounted(() => {
-  if (user.value) {
-    connectToRoom();
-  }
+  connectToRoom();
 });
 
 onUnmounted(() => {

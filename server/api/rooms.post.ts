@@ -13,7 +13,6 @@ export default defineEventHandler(() => {
     id: `${roomName}@${nanoid(4)}`,
     name: roomName,
     createdAt: Date.now(),
-    status: 'waiting' as const,
     users: new Map(),
   };
 

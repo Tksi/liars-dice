@@ -23,8 +23,8 @@ const createRoom = async (): Promise<void> => {
   isCreatingRoom.value = true;
 
   try {
-    await $fetch('/api/rooms', { method: 'POST' });
-    await loadRooms();
+    const { id: roomId } = await $fetch('/api/rooms', { method: 'POST' });
+    await joinRoom(roomId);
   } catch (err) {
     console.error('ルームの作成に失敗しました:', err);
   } finally {
@@ -36,9 +36,10 @@ const createRoom = async (): Promise<void> => {
  * ルームに参加
  * @param roomId - ルームID
  */
-const joinRoom = (roomId: string): void => {
+const joinRoom = (roomId: string) => {
   console.info('ルーム参加:', roomId);
-  void navigateTo(`/${roomId}`);
+
+  return navigateTo(`/${roomId}`);
 };
 
 // コンポーネントマウント時の処理
