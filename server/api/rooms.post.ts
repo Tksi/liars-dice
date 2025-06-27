@@ -14,6 +14,9 @@ export default defineEventHandler(() => {
     name: roomName,
     createdAt: Date.now(),
     users: new Map(),
+    gameStatus: 'waiting' as const,
+    currentBet: null,
+    lastChallengeResult: null,
   };
 
   addRoom(room);

@@ -6,7 +6,8 @@ export default defineEventHandler(() => {
   return rooms
     .values()
     .toArray()
-    .toSorted((a, b) => b.createdAt - a.createdAt)
+    .filter((room) => room.gameStatus === 'waiting')
+    .toReversed()
     .map((room) => {
       return JSON.parse(JSON.stringify(room, replacer)) as Room;
     });

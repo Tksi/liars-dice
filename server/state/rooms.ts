@@ -1,22 +1,46 @@
 import { debounce } from 'lodash-es';
 import { replacer } from '../lib/replacer';
-import type { ServerRoom } from '~/types';
+import type { ServerRoom, ServerUser } from '~/types';
 // ブロードキャストのデバウンス設定
 const BROADCAST_DEBOUNCE_MS = 10;
 
 /**
- * Mapオブジェクトを変更検知できるProxyでラップする
- * @param map ラップするMapオブジェクト
+ * ServerUserオブジェクトを変更検知できるProxyでラップする
+ * @param user ラップするServerUserオブジェクト
  * @param onChange 変更時のコールバック関数
- * @returns Proxy化されたMapオブジェクト
+ * @returns Proxy化されたServerUserオブジェクト
  */
-const createMapProxy = <K, V>(
-  map: Map<K, V>,
+const createUserProxy = (
+  user: ServerUser,
   onChange: () => void,
-): Map<K, V> => {
+): ServerUser => {
+  return new Proxy(user, {
+    set(target, property, value) {
+      const result = Reflect.set(target, property, value);
+
+      // プロパティが正常に設定された場合のみデバウンスされたブロードキャスト
+      if (result) {
+        onChange();
+      }
+
+      return result;
+    },
+  });
+};
+
+/**
+ * ユーザーMapを変更検知できるProxyでラップする
+ * @param map ラップするMap<string, ServerUser>オブジェクト
+ * @param onChange 変更時のコールバック関数
+ * @returns Proxy化されたMap<string, ServerUser>オブジェクト
+ */
+const createUserMapProxy = (
+  map: Map<string, ServerUser>,
+  onChange: () => void,
+): Map<string, ServerUser> => {
   return new Proxy(map, {
     get(target, property) {
-      const originalMethod = target[property as keyof Map<K, V>];
+      const originalMethod = target[property as keyof Map<string, ServerUser>];
 
       // 関数の場合はbindでthisコンテキストを修正
       if (typeof originalMethod === 'function') {
@@ -30,6 +54,14 @@ const createMapProxy = <K, V>(
             const result = (
               originalMethod as (...args: unknown[]) => unknown
             ).apply(target, args);
+
+            // setメソッドの場合、値もプロキシ化する
+            if (property === 'set' && args.length >= 2) {
+              const userId = args[0] as string;
+              const user = args[1] as ServerUser;
+              const proxiedUser = createUserProxy(user, onChange);
+              target.set(userId, proxiedUser);
+            }
 
             onChange();
 
@@ -53,13 +85,19 @@ const createMapProxy = <K, V>(
  * @returns Proxy化されたRoomオブジェクト
  */
 const createRoomProxy = (room: ServerRoom, roomId: string): ServerRoom => {
-  // ルーム毎にdebounce関数を作成(主に、同じuserIdが接続したときの削除、追加処理で2回発火するのを防ぐため)
+  // ルーム毎にdebounce関数を作成
   const debouncedBroadcast = debounce(() => {
     void broadcastToRoom(roomId);
   }, BROADCAST_DEBOUNCE_MS);
 
+  // 既存のユーザーをプロキシ化
+  for (const [userId, user] of room.users) {
+    const proxiedUser = createUserProxy(user, debouncedBroadcast);
+    room.users.set(userId, proxiedUser);
+  }
+
   // usersMapをProxy化して変更を検知
-  const proxiedUsers = createMapProxy(room.users, debouncedBroadcast);
+  const proxiedUsers = createUserMapProxy(room.users, debouncedBroadcast);
 
   return new Proxy(
     { ...room, users: proxiedUsers },
