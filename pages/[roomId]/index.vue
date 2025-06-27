@@ -281,7 +281,7 @@ onUnmounted(() => {
         <!-- Game Start Button -->
         <div v-if="canStartGame" class="mt-4 text-center">
           <button
-            class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-lg text-white transition-colors"
+            class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-lg text-white transition-colors"
             @click="() => startGame()"
           >
             開始
