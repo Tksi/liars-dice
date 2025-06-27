@@ -51,6 +51,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `server/lib/` - サーバーサイドユーティリティ
 - `public/` - 静的ファイル
 - `components/` - 再利用可能なVueコンポーネント
+- `composables/` - Vue 3 Composition API用のコンポーザブル関数
 - `types/` - TypeScript型定義
 
 ### TypeScript設定
@@ -309,7 +310,7 @@ type Room = Omit<ServerRoom, 'users'> & {
 - ユーザー情報は `liars-dice-user` キーでlocalStorageに保存
 - 初回アクセス時に `globalThis.prompt()` でユーザー名を入力
 - ユーザーIDは `${userName}@${nanoid(4)}` 形式で自動生成
-- `useLocalUser()` composableで統一管理
+- `useLocalUser()` composableで統一管理（`composables/useUser.ts`）
 
 ### SSE接続のデバッグ
 

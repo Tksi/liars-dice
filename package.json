@@ -2,6 +2,7 @@
   "name": "liars-dice",
   "type": "module",
   "scripts": {
+    "start": "nuxt build && nuxt start",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",

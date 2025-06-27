@@ -1,0 +1,16 @@
+services:
+  liars-dice:
+    image: node:22
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: npm run start
+    depends_on:
+      - postgres
+  tunnel:
+    image: cloudflare/cloudflared
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - liars-dice
