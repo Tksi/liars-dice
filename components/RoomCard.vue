@@ -29,7 +29,6 @@ defineOptions({
  * ルームに参加
  */
 const handleJoin = (): void => {
-  viewTransitionName.value = 'room-name';
   emit('join', room.id);
 };
 
@@ -46,21 +45,18 @@ const formatDate = (timestamp: number): string => {
     minute: '2-digit',
   });
 };
-
-const viewTransitionName = ref<string>();
 </script>
 
 <template>
   <div
-    class="cursor-pointer duration-200 focus-within:bg-gray-700 group hover:bg-gray-700 p-6 transition-colors"
-    :style="{ viewTransitionName: viewTransitionName }"
+    class="cursor-pointer duration-200 focus-within:bg-gray-700 group hover:bg-gray-700 p-4 transition-colors"
     tabindex="0"
     @click="() => handleJoin()"
     @keydown.enter="() => handleJoin()"
   >
     <div class="flex items-center justify-between">
       <div class="flex-1">
-        <div class="flex items-center mb-2 space-x-3">
+        <div class="flex items-center mb-1 space-x-2">
           <h4
             class="font-medium group-hover:text-indigo-400 text-gray-100 text-lg transition-colors"
           >
@@ -69,7 +65,7 @@ const viewTransitionName = ref<string>();
         </div>
         <p class="flex items-center space-x-1 text-gray-400 text-sm">
           <svg
-            class="h-4 w-4"
+            class="h-3 w-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -84,11 +80,11 @@ const viewTransitionName = ref<string>();
           <span>{{ formatDate(room.createdAt) }}</span>
         </p>
       </div>
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-3">
         <div class="text-right">
-          <div class="flex items-center mb-1 space-x-2">
+          <div class="flex items-center space-x-1">
             <svg
-              class="h-4 text-indigo-400 w-4"
+              class="h-3 text-indigo-400 w-3"
               fill="currentColor"
               viewBox="0 0 24 24"
             >
@@ -96,16 +92,16 @@ const viewTransitionName = ref<string>();
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            <span class="font-medium text-gray-100 text-lg">{{
+            <span class="font-medium text-base text-gray-100">{{
               Object.keys(room.users).length
             }}</span>
           </div>
         </div>
         <div
-          class="bg-gray-700 flex group-hover:bg-indigo-600 h-8 items-center justify-center rounded-full transition-colors w-8"
+          class="bg-gray-700 flex group-hover:bg-indigo-600 h-6 items-center justify-center rounded-full transition-colors w-6"
         >
           <svg
-            class="group-hover:text-white h-4 text-gray-300 w-4"
+            class="group-hover:text-white h-3 text-gray-300 w-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

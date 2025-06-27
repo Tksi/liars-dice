@@ -55,6 +55,10 @@ const connectToRoom = (): void => {
     try {
       const data = JSON.parse(event.data) as Room;
       room.value = data;
+      betForm.value = {
+        count: data.currentBet?.count ?? 1,
+        face: data.currentBet?.face ?? 2,
+      };
       console.info(`[${timestamp}] パース済みデータ:`, data);
     } catch {
       console.error(`[${timestamp}] JSON パースに失敗しました`);
@@ -111,21 +115,6 @@ const currentUser = computed(() => {
 });
 
 /**
- * ハイライト付きサイコロ表示用の関数
- * @param dice サイコロの配列
- * @param highlightFace ハイライトする出目
- */
-const getDiceWithHighlight = (
-  dice: number[],
-  highlightFace: number,
-): { value: number; isHighlighted: boolean }[] => {
-  return dice.map((d) => ({
-    value: d,
-    isHighlighted: d === highlightFace || d === 1, // 指定の出目か1（ワイルド）をハイライト
-  }));
-};
-
-/**
  * ベット処理
  * @param count ベット数
  * @param face サイコロの出目
@@ -147,7 +136,7 @@ const makeBet = async (count: number, face: number): Promise<void> => {
 };
 
 /**
- * チャレンジ処理
+ * ダウト処理
  */
 const makeChallenge = async (): Promise<void> => {
   if (localUser.value === null) return;
@@ -157,7 +146,7 @@ const makeChallenge = async (): Promise<void> => {
       method: 'POST',
     });
   } catch (err) {
-    console.error('チャレンジに失敗しました:', err);
+    console.error('ダウトに失敗しました:', err);
   }
 };
 
@@ -178,40 +167,71 @@ const getMinBet = computed(() => {
   const currentBet = room.value.currentBet;
 
   return {
-    count: currentBet.count + 1,
+    count:
+      betForm.value.face === currentBet.face
+        ? currentBet.count + 1
+        : currentBet.count,
     face: currentBet.face,
   };
 });
 
 /**
- * チャレンジ結果モーダルの表示状態
+ * ベットが有効かどうかをチェック
  */
-const showChallengeResult = ref(false);
-
-/**
- * チャレンジ結果を表示
- */
-const displayChallengeResult = (): void => {
-  if (room.value?.lastChallengeResult) {
-    showChallengeResult.value = true;
+const isBetValid = computed(() => {
+  if (!room.value?.currentBet) {
+    return betForm.value.count >= 1 && betForm.value.face >= 2;
   }
-};
+
+  const currentBet = room.value.currentBet;
+  const bet = betForm.value;
+
+  // 同じ出目の場合は個数を増やす必要がある
+  if (bet.face === currentBet.face) {
+    return bet.count > currentBet.count;
+  }
+
+  // より大きい出目の場合は同じ個数以上
+  if (bet.face > currentBet.face) {
+    return bet.count >= currentBet.count;
+  }
+
+  // より小さい出目は無効
+  return false;
+});
 
 /**
- * チャレンジ結果モーダルを閉じる
+ * 全プレイヤーのサイコロ表示状態管理
  */
-const closeChallengeResult = (): void => {
-  showChallengeResult.value = false;
+const showAllDice = ref(false);
+const maskTimer = ref<NodeJS.Timeout | null>(null);
+
+/**
+ * 全プレイヤーのサイコロマスクを一時的に解除
+ */
+const showAllDiceTemporarily = (): void => {
+  showAllDice.value = true;
+
+  // 既存のタイマーをクリア
+  if (maskTimer.value) {
+    clearTimeout(maskTimer.value);
+  }
+
+  // 5秒後にマスク復帰
+  maskTimer.value = setTimeout(() => {
+    showAllDice.value = false;
+    maskTimer.value = null;
+  }, 7500);
 };
 
 /**
- * チャレンジ結果の変更を監視
+ * ダウト結果の変更を監視
  */
 watch(
   () => room.value?.lastChallengeResult,
   (newResult) => {
     if (newResult) {
-      displayChallengeResult();
+      showAllDiceTemporarily();
     }
   },
 );
@@ -222,113 +242,175 @@ onMounted(() => {
 
 onUnmounted(() => {
   disconnect();
+
+  // タイマーのクリーンアップ
+  if (maskTimer.value) {
+    clearTimeout(maskTimer.value);
+  }
 });
 </script>
 
 <template>
   <div class="bg-gray-900 min-h-screen">
-    <AppBar />
-
-    <div class="container mx-auto px-4 py-8">
-      <!-- Room Header -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <!-- Waiting State - Participants List -->
       <div
-        class="bg-gray-800 mb-8 p-6 rounded-lg shadow-lg"
-        :style="{ viewTransitionName: 'room-name' }"
+        v-if="room && room.gameStatus === 'waiting'"
+        class="bg-gray-800 mb-4 p-4 rounded-lg"
       >
-        <div class="flex items-center justify-between mb-4">
-          <h1 class="font-bold text-2xl text-gray-100">
-            {{ room?.name }}
-          </h1>
-          <NuxtLink
-            class="bg-gray-700 hover:bg-gray-600 hover:text-white px-4 py-2 rounded-lg text-gray-300 transition-colors"
-            to="/"
+        <div class="gap-3 grid lg:grid-cols-3 md:grid-cols-2">
+          <div
+            v-for="user in Object.values(room.users)"
+            :key="user.id"
+            class="bg-gray-700 border border-gray-600 p-3 rounded-lg"
+            :class="{ 'opacity-75': !user.isConnected }"
           >
-            ← ルーム一覧に戻る
-          </NuxtLink>
+            <div class="flex items-center space-x-2">
+              <div>
+                <p class="font-medium text-gray-100 text-lg">
+                  {{ user.name }}
+                  <span
+                    v-if="user.id === localUser.id"
+                    class="text-base text-gray-400"
+                    >(あなた)</span
+                  >
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="flex items-center space-x-4 text-sm">
-          <div class="flex items-center space-x-2">
+        <!-- Game Start Button -->
+        <div v-if="canStartGame" class="mt-4 text-center">
+          <button
+            class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-lg text-white transition-colors"
+            @click="() => startGame()"
+          >
+            ゲーム開始
+          </button>
+        </div>
+      </div>
+
+      <!-- All Players' Dice (only when game is playing) -->
+      <div v-if="room && room.gameStatus !== 'waiting'" class="mb-4">
+        <div class="gap-3 grid md:grid-cols-2 xl:grid-cols-3">
+          <div
+            v-for="user in Object.values(room.users)"
+            :key="user.id"
+            class="bg-gray-700 border-2 p-2 rounded-lg"
+            :class="{
+              'opacity-50': !user.isConnected,
+              'border-green-400': !showAllDice && user.isMyTurn,
+              'border-gray-600': !showAllDice && !user.isMyTurn,
+              'border-blue-500':
+                showAllDice &&
+                room.lastChallengeResult?.challengedUserId === user.id,
+            }"
+          >
+            <div class="flex h-8 justify-between mb-2 px-1">
+              <p class="font-medium text-base text-gray-100">
+                {{ user.name }}
+                <span
+                  v-if="user.id === localUser.id"
+                  class="text-gray-400 text-sm"
+                  >(あなた)</span
+                >
+              </p>
+
+              <!-- Current Bet Display for the user who made the bet -->
+              <div
+                v-if="room.currentBet?.userId === user.id"
+                class="bg-blue-600 font-bold px-2 py-1 rounded text-base text-white"
+              >
+                {{ room.currentBet.face }}が{{ room.currentBet.count }}個以上
+              </div>
+
+              <div
+                v-else-if="
+                  showAllDice === true &&
+                  room.lastChallengeResult?.raisedUserId === user.id
+                "
+                class="bg-blue-600 font-bold px-2 py-1 rounded text-base text-white"
+              >
+                {{ room.lastChallengeResult.face }}が{{
+                  room.lastChallengeResult.expectedCount
+                }}個以上({{ room.lastChallengeResult.actualCount }})
+              </div>
+            </div>
+
+            <!-- Dice Display -->
             <div
-              class="h-3 rounded-full w-3"
-              :class="{
-                'bg-yellow-500': connectionStatus === 'connecting',
-                'bg-green-500': connectionStatus === 'connected',
-                'bg-red-500':
-                  connectionStatus === 'error' ||
-                  connectionStatus === 'disconnected',
-              }"
-            />
-            <span class="text-gray-300">
-              {{
-                connectionStatus === 'connecting'
-                  ? '接続中...'
-                  : connectionStatus === 'connected'
-                    ? '接続済み'
-                    : connectionStatus === 'error'
-                      ? 'エラー'
-                      : '切断済み'
-              }}
-            </span>
-          </div>
-
-          <div v-if="localUser" class="text-gray-400">
-            プレイヤー: {{ localUser.name }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Game Start Button -->
-      <div
-        v-if="room && room.gameStatus === 'waiting' && canStartGame"
-        class="bg-gray-800 mb-6 p-6 rounded-lg shadow-lg text-center"
-      >
-        <button
-          class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-white transition-colors"
-          @click="() => startGame()"
-        >
-          ゲーム開始
-        </button>
-      </div>
-
-      <!-- Game Status -->
-      <div
-        v-if="room && room.gameStatus === 'playing'"
-        class="bg-gray-800 mb-6 p-6 rounded-lg shadow-lg"
-      >
-        <!-- Current Bet Display -->
-        <div v-if="room.currentBet" class="bg-gray-700 mb-4 p-4 rounded-lg">
-          <h3 class="font-semibold mb-2 text-gray-200">現在の宣言</h3>
-          <p class="text-gray-300">
-            {{ room.currentBet.face }}の目が{{ room.currentBet.count }}個以上
-          </p>
-        </div>
-      </div>
-
-      <!-- Player's Dice (only when game is playing) -->
-      <div
-        v-if="
-          room &&
-          room.gameStatus === 'playing' &&
-          currentUser &&
-          currentUser.dice.length > 0
-        "
-        class="bg-gray-800 mb-6 p-6 rounded-lg shadow-lg"
-      >
-        <h3 class="font-bold mb-4 text-gray-100 text-lg">あなたのサイコロ</h3>
-        <div class="bg-gray-700 p-4 rounded-lg text-center">
-          <div class="flex font-mono gap-2 justify-center text-2xl">
-            <span
-              v-for="(die, index) in currentUser.dice"
-              :key="index"
-              class="bg-white border-2 border-gray-400 flex h-10 items-center justify-center rounded text-black w-10"
+              v-if="
+                ((showAllDice &&
+                room?.lastChallengeResult?.allUsersDice?.[user.id]
+                  ? room?.lastChallengeResult.allUsersDice[user.id]?.dice
+                  : user.dice
+                )?.length ?? 0) > 0
+              "
+              class="text-center"
             >
-              {{ die }}
-            </span>
+              <div
+                class="flex flex-wrap font-mono gap-1 justify-center mb-2 text-2xl"
+              >
+                <span
+                  v-for="(die, index) in showAllDice &&
+                  room?.lastChallengeResult?.allUsersDice?.[user.id]
+                    ? room?.lastChallengeResult.allUsersDice[user.id]?.dice
+                    : user.dice"
+                  :key="index"
+                  class="border-2 flex font-bold h-12 items-center justify-center rounded text-3xl w-12"
+                  :class="
+                    user.id === localUser.id || showAllDice
+                      ? [
+                          'text-black',
+                          showAllDice &&
+                          room?.lastChallengeResult &&
+                          (die === room?.lastChallengeResult?.face || die === 1)
+                            ? 'bg-yellow-300 border-yellow-500 font-bold'
+                            : 'bg-white border-gray-400',
+                        ]
+                      : 'bg-gray-500 border-gray-600 text-gray-300'
+                  "
+                >
+                  {{
+                    user.id === localUser.id || showAllDice
+                      ? die === 1
+                        ? '*'
+                        : die
+                      : '?'
+                  }}
+                </span>
+              </div>
+            </div>
+
+            <!-- No Dice (Eliminated) -->
+            <div v-else class="text-center">
+              <div class="bg-red-500 px-4 py-2 rounded text-white">脱落</div>
+            </div>
           </div>
-          <p class="mt-2 text-gray-400 text-sm">
-            {{ currentUser.dice.length }}個のサイコロ
-          </p>
+        </div>
+      </div>
+
+      <!-- Challenge Result Summary -->
+      <div
+        v-if="showAllDice && room?.lastChallengeResult"
+        class="bg-gray-700 mb-4 p-3 rounded-lg"
+      >
+        <div
+          class="font-bold text-center text-xl"
+          :class="
+            room?.lastChallengeResult?.success
+              ? room.lastChallengeResult.raisedUserId === localUser.id
+                ? 'text-red-400'
+                : 'text-green-400'
+              : room.lastChallengeResult.raisedUserId === localUser.id
+                ? 'text-green-400'
+                : 'text-red-400'
+          "
+        >
+          {{
+            `${room.lastChallengeResult.challengedUserName}のダウト${room.lastChallengeResult.success ? '成功！' : '失敗！'}`
+          }}
         </div>
       </div>
 
@@ -338,62 +420,74 @@ onUnmounted(() => {
           room &&
           room.gameStatus === 'playing' &&
           currentUser &&
-          currentUser.isMyTurn
+          currentUser.isMyTurn &&
+          !showAllDice
         "
-        class="bg-gray-800 mb-6 p-6 rounded-lg shadow-lg"
+        class="bg-gray-800 mb-4 p-4 rounded-lg"
       >
-        <h3 class="font-bold mb-4 text-gray-100 text-lg">あなたの番です</h3>
-
         <!-- Action Buttons -->
-        <div v-if="!showBetForm" class="flex gap-4 mb-4">
+        <div v-if="!showBetForm" class="flex gap-4">
           <button
-            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white transition-colors"
+            class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg text-lg text-white transition-colors"
             @click="() => (showBetForm = true)"
           >
             レイズ
           </button>
           <button
             v-if="room.currentBet"
-            class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition-colors"
+            class="bg-red-600 hover:bg-red-700 px-4 py-3 rounded-lg text-lg text-white transition-colors"
             @click="() => makeChallenge()"
           >
-            チャレンジ
+            ダウト
           </button>
         </div>
 
         <!-- Bet Form -->
-        <div v-if="showBetForm" class="bg-gray-700 p-4 rounded-lg">
-          <h4 class="font-semibold mb-3 text-gray-200">ベットを入力</h4>
+        <div v-if="showBetForm" class="bg-gray-700 p-3 rounded-lg">
+          <div class="flex gap-3 items-center">
+            <select
+              v-model="betForm.face"
+              class="bg-gray-600 border border-gray-500 px-3 py-2 rounded text-base text-white"
+            >
+              <option :value="2">2</option>
+              <option :value="3">3</option>
+              <option :value="4">4</option>
+              <option :value="5">5</option>
+              <option :value="6">6</option>
+            </select>
 
-          <div class="flex gap-4 items-center mb-4">
-            <div>
-              <label class="block mb-1 text-gray-300 text-sm">出目</label>
-              <select
-                v-model="betForm.face"
-                class="bg-gray-600 border border-gray-500 px-3 py-2 rounded text-white"
+            <span class="text-gray-200 text-lg">が</span>
+
+            <div class="flex items-center">
+              <button
+                class="bg-gray-600 border border-gray-500 hover:bg-gray-500 px-2 py-2 rounded-l text-white"
+                :disabled="betForm.count <= 1"
+                @click="() => (betForm.count = Math.max(1, betForm.count - 1))"
               >
-                <option :value="2">2</option>
-                <option :value="3">3</option>
-                <option :value="4">4</option>
-                <option :value="5">5</option>
-                <option :value="6">6</option>
-              </select>
+                -
+              </button>
+              <p
+                class="bg-gray-600 border-gray-500 border-y px-3 py-2 text-base text-center text-white w-10"
+              >
+                {{ betForm.count }}
+              </p>
+              <button
+                class="bg-gray-600 border border-gray-500 hover:bg-gray-500 px-2 py-2 rounded-r text-white"
+                @click="() => (betForm.count = betForm.count + 1)"
+              >
+                +
+              </button>
             </div>
 
-            <div>
-              <label class="block mb-1 text-gray-300 text-sm">個数</label>
-              <input
-                v-model.number="betForm.count"
-                class="bg-gray-600 border border-gray-500 px-3 py-2 rounded text-white w-20"
-                :min="getMinBet.count"
-                type="number"
-              />
-            </div>
-          </div>
+            <span class="text-gray-200 text-lg">個以上</span>
 
-          <div class="flex gap-2">
             <button
-              class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white transition-colors"
+              class="px-4 py-3 rounded text-lg text-white transition-colors"
+              :class="{
+                'bg-blue-600 hover:bg-blue-700': isBetValid,
+                'bg-gray-500 cursor-not-allowed': !isBetValid,
+              }"
+              :disabled="!isBetValid"
               @click="
                 () => {
                   makeBet(betForm.count, betForm.face);
@@ -404,7 +498,7 @@ onUnmounted(() => {
               ベット
             </button>
             <button
-              class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white transition-colors"
+              class="bg-gray-600 hover:bg-gray-700 px-4 py-3 rounded text-lg text-white transition-colors"
               @click="() => (showBetForm = false)"
             >
               キャンセル
@@ -413,196 +507,32 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Users List -->
+      <!-- Game Finished State -->
       <div
-        v-if="room && Object.keys(room.users).length > 0"
-        class="bg-gray-800 p-6 rounded-lg shadow-lg"
+        v-if="!showAllDice && room && room.gameStatus === 'finished'"
+        class="bg-gray-800 mb-4 p-4 rounded-lg"
       >
-        <h2 class="font-bold mb-4 text-gray-100 text-xl">
-          参加者 ({{ Object.keys(room.users).length }}人)
-        </h2>
-        <div v-auto-animate class="gap-4 grid lg:grid-cols-3 md:grid-cols-2">
-          <div
-            v-for="user in Object.values(room.users)"
-            :key="user.id"
-            class="p-4 rounded-lg"
-            :class="
-              room?.gameStatus === 'playing' && !user.isConnected
-                ? 'bg-gray-600 opacity-75'
-                : 'bg-gray-700'
-            "
-            :style="{
-              viewTransitionName:
-                user.id === localUser.id ? 'user-name' : undefined,
-            }"
+        <div class="text-center">
+          <button
+            v-if="canStartGame"
+            class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-lg text-white transition-colors"
+            @click="() => startGame()"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-3">
-                <div
-                  class="bg-blue-500 flex h-10 items-center justify-center rounded-full text-white w-10"
-                >
-                  {{ user.name.charAt(0).toUpperCase() }}
-                </div>
-                <div>
-                  <p class="font-medium text-gray-100">{{ user.name }}</p>
-                  <p class="text-gray-400 text-sm">
-                    {{ user.id === localUser.id ? 'あなた' : 'プレイヤー' }}
-                  </p>
-                  <p
-                    v-if="room?.gameStatus === 'playing'"
-                    class="text-gray-500 text-xs"
-                  >
-                    サイコロ: {{ user.dice.length }}個
-                  </p>
-                </div>
-              </div>
-              <div class="flex flex-col items-end space-y-1">
-                <div
-                  v-if="user.isMyTurn"
-                  class="bg-green-500 px-2 py-1 rounded text-sm text-white"
-                >
-                  手番
-                </div>
-                <div
-                  v-if="room?.gameStatus === 'playing' && !user.isConnected"
-                  class="bg-yellow-500 px-2 py-1 rounded text-black text-sm"
-                >
-                  接続中...
-                </div>
-                <div
-                  v-if="
-                    room?.gameStatus === 'playing' && user.dice.length === 0
-                  "
-                  class="bg-red-500 px-2 py-1 rounded text-sm text-white"
-                >
-                  脱落
-                </div>
-              </div>
-            </div>
-          </div>
+            再戦
+          </button>
         </div>
       </div>
 
       <!-- Empty State -->
       <div
         v-else-if="room && Object.keys(room.users).length === 0"
-        class="bg-gray-800 p-6 rounded-lg shadow-lg"
+        class="bg-gray-800 p-4 rounded-lg"
       >
         <div class="text-center">
-          <p class="text-gray-300">まだ参加者がいません</p>
-          <p class="text-gray-500 text-sm">
+          <p class="text-gray-300 text-lg">まだ参加者がいません</p>
+          <p class="text-base text-gray-500">
             他のプレイヤーが参加するまでお待ちください
           </p>
-        </div>
-      </div>
-
-      <!-- Challenge Result Modal -->
-      <div
-        v-if="showChallengeResult && room?.lastChallengeResult"
-        class="bg-black bg-opacity-50 fixed flex inset-0 items-center justify-center p-4 z-50"
-        @click="() => closeChallengeResult()"
-      >
-        <div
-          class="bg-gray-800 max-h-[90vh] max-w-4xl overflow-y-auto p-6 rounded-lg shadow-xl w-full"
-          @click.stop
-        >
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="font-bold text-2xl text-gray-100">チャレンジ結果</h2>
-            <button
-              class="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded text-white transition-colors"
-              @click="() => closeChallengeResult()"
-            >
-              ✕
-            </button>
-          </div>
-
-          <!-- Challenge Summary -->
-          <div class="bg-gray-700 mb-6 p-4 rounded-lg">
-            <div class="gap-4 grid grid-cols-2 mb-4">
-              <div>
-                <h3 class="font-semibold mb-2 text-gray-200">宣言された内容</h3>
-                <p class="text-gray-300">
-                  {{ room.lastChallengeResult.face }}の目が{{
-                    room.lastChallengeResult.expectedCount
-                  }}個以上
-                </p>
-              </div>
-              <div>
-                <h3 class="font-semibold mb-2 text-gray-200">実際の結果</h3>
-                <p class="text-gray-300">
-                  実際は{{ room.lastChallengeResult.actualCount }}個でした
-                </p>
-              </div>
-            </div>
-            <div
-              class="font-bold text-center text-lg"
-              :class="
-                room.lastChallengeResult.success
-                  ? 'text-green-400'
-                  : 'text-red-400'
-              "
-            >
-              {{
-                room.lastChallengeResult.success
-                  ? 'チャレンジ成功！'
-                  : 'チャレンジ失敗！'
-              }}
-            </div>
-          </div>
-
-          <!-- All Players' Dice -->
-          <div class="bg-gray-700 p-4 rounded-lg">
-            <h3 class="font-semibold mb-4 text-gray-200">
-              全プレイヤーのサイコロ
-            </h3>
-            <div class="gap-4 grid lg:grid-cols-3 md:grid-cols-2">
-              <div
-                v-for="(playerData, playerId) in room.lastChallengeResult
-                  .allUsersDice"
-                :key="playerId"
-                class="bg-gray-600 p-3 rounded"
-              >
-                <h4 class="font-medium mb-2 text-gray-100">
-                  {{ playerData.name }}
-                </h4>
-                <div class="flex flex-wrap gap-1">
-                  <span
-                    v-for="(die, index) in getDiceWithHighlight(
-                      playerData.dice,
-                      room.lastChallengeResult.face,
-                    )"
-                    :key="index"
-                    class="border flex h-8 items-center justify-center rounded text-sm w-8"
-                    :class="
-                      die.isHighlighted
-                        ? 'bg-yellow-300 border-yellow-500 text-black font-bold'
-                        : 'bg-white border-gray-400 text-black'
-                    "
-                  >
-                    {{ die.value }}
-                  </span>
-                </div>
-                <p class="mt-1 text-gray-400 text-xs">
-                  対象:
-                  {{
-                    getDiceWithHighlight(
-                      playerData.dice,
-                      room.lastChallengeResult.face,
-                    ).filter((d) => d.isHighlighted).length
-                  }}個
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-6 text-center">
-            <button
-              class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg text-white transition-colors"
-              @click="() => closeChallengeResult()"
-            >
-              閉じる
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -52,6 +52,8 @@ export default defineEventHandler((event) => {
     isFirstPlayer = false;
   }
 
+  room.lastChallengeResult = null;
+
   // レスポンスは空（SSEで状態更新される）
   return;
 });

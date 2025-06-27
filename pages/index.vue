@@ -59,16 +59,10 @@ onMounted(() => {
 
 <template>
   <div class="bg-gray-900 min-h-screen">
-    <AppBar />
+    <div class="max-w-4xl mx-auto px-4 py-6">
+      <UserCard v-if="localUser" :local-user="localUser" />
 
-    <div class="container mx-auto px-4 py-8">
-      <UserCard
-        v-if="localUser"
-        :local-user="localUser"
-        :style="{ viewTransitionName: 'user-name' }"
-      />
-
-      <div class="max-w-4xl mb-8 mx-auto">
+      <div class="mb-6">
         <IconButton
           class="block mx-auto sm:w-auto w-full"
           :disabled="isCreatingRoom"
@@ -94,15 +88,15 @@ onMounted(() => {
       </div>
 
       <!-- Room List -->
-      <div class="max-w-4xl mx-auto">
+      <div>
         <div class="bg-gray-800 overflow-hidden rounded-lg shadow-lg">
-          <div class="bg-gray-700 border-b border-gray-600 px-6 py-4">
+          <div class="bg-gray-700 border-b border-gray-600 px-4 py-3">
             <div class="flex items-center space-x-3">
               <div
-                class="bg-indigo-600 flex h-8 items-center justify-center rounded-lg w-8"
+                class="bg-indigo-600 flex h-6 items-center justify-center rounded-lg w-6"
               >
                 <svg
-                  class="h-4 text-white w-4"
+                  class="h-3 text-white w-3"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >
@@ -111,7 +105,7 @@ onMounted(() => {
                   />
                 </svg>
               </div>
-              <h3 class="font-medium text-gray-100 text-lg">ルーム一覧</h3>
+              <h3 class="font-medium text-gray-100 text-xl">ルーム一覧</h3>
             </div>
           </div>
 

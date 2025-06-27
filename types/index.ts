@@ -18,6 +18,9 @@ export type GameStatus = 'finished' | 'playing' | 'waiting';
  * チャレンジ結果詳細
  */
 export type ChallengeResult = {
+  raisedUserId: string;
+  challengedUserId: string;
+  challengedUserName: string;
   success: boolean;
   actualCount: number;
   expectedCount: number;

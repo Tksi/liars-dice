@@ -53,10 +53,10 @@ const buttonClass = computed(() => {
 
   const sizeClass =
     size === 'sm'
-      ? 'px-3 py-2 text-sm'
+      ? 'px-2 py-1 text-sm'
       : size === 'lg'
-        ? 'px-8 py-4 text-lg'
-        : 'px-6 py-3';
+        ? 'px-6 py-3'
+        : 'px-4 py-2';
 
   const disabledClass = disabled
     ? 'disabled:bg-gray-600 disabled:cursor-not-allowed'

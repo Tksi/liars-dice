@@ -17,14 +17,14 @@ defineOptions({
 </script>
 
 <template>
-  <div class="max-w-md mb-8 mx-auto">
-    <div class="bg-gray-800 p-6 rounded-lg shadow-md">
-      <div class="flex items-center space-x-4">
+  <div class="max-w-md mb-6 mx-auto">
+    <div class="bg-gray-800 p-4 rounded-lg">
+      <div class="flex items-center space-x-3">
         <div
-          class="bg-indigo-600 flex h-12 items-center justify-center rounded-full w-12"
+          class="bg-indigo-600 flex h-8 items-center justify-center rounded-full w-8"
         >
           <svg
-            class="h-6 text-white w-6"
+            class="h-4 text-white w-4"
             fill="currentColor"
             viewBox="0 0 24 24"
           >

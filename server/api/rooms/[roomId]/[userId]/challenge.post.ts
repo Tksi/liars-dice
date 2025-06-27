@@ -1,4 +1,4 @@
-import type { ChallengeResult, ServerRoom } from '~/types';
+import type { ChallengeResult, ServerRoom, ServerUser } from '~/types';
 import { nextPlayerTurn } from '~/server/lib/nextPlayerTurn';
 import { rollDice } from '~/server/lib/util';
 import { rooms } from '~/server/state/rooms';
@@ -6,10 +6,17 @@ import { rooms } from '~/server/state/rooms';
 /**
  * チャレンジ結果を計算
  * @param room ルーム情報
+ * @param challenger
  */
-const resolveChallenge = (room: ServerRoom): ChallengeResult => {
+const resolveChallenge = (
+  room: ServerRoom,
+  challenger: ServerUser,
+): ChallengeResult => {
   if (!room.currentBet) {
     return {
+      raisedUserId: '',
+      challengedUserId: '',
+      challengedUserName: '',
       success: false,
       actualCount: 0,
       expectedCount: 0,
@@ -41,6 +48,9 @@ const resolveChallenge = (room: ServerRoom): ChallengeResult => {
   }
 
   return {
+    raisedUserId: room.currentBet.userId,
+    challengedUserId: challenger.id,
+    challengedUserName: challenger.name,
     success: actualCount < count,
     actualCount,
     expectedCount: count,
@@ -109,7 +119,7 @@ export default defineEventHandler((event) => {
   }
 
   // チャレンジ結果を計算（サイコロ再振り前に実行）
-  const challengeResult = resolveChallenge(room);
+  const challengeResult = resolveChallenge(room, challenger);
   // チャレンジ結果をルームに保存（フロントエンドで表示するため）
   room.lastChallengeResult = challengeResult;
 

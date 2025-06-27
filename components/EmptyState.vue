@@ -19,14 +19,14 @@ defineOptions({
 </script>
 
 <template>
-  <div class="p-12 text-center">
+  <div class="p-8 text-center">
     <div
-      class="bg-gray-700 flex h-16 items-center justify-center mb-4 mx-auto rounded-full w-16"
+      class="bg-gray-700 flex h-12 items-center justify-center mb-3 mx-auto rounded-full w-12"
     >
       <!-- Inbox Icon -->
       <svg
         v-if="icon === 'inbox'"
-        class="h-8 text-gray-400 w-8"
+        class="h-6 text-gray-400 w-6"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -41,7 +41,7 @@ defineOptions({
       <!-- Folder Icon -->
       <svg
         v-if="icon === 'folder'"
-        class="h-8 text-gray-400 w-8"
+        class="h-6 text-gray-400 w-6"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -54,7 +54,7 @@ defineOptions({
         />
       </svg>
     </div>
-    <p class="mb-2 text-gray-300 text-lg">{{ title }}</p>
-    <p class="text-gray-400">{{ description }}</p>
+    <p class="mb-1 text-gray-300 text-lg">{{ title }}</p>
+    <p class="text-gray-400 text-base">{{ description }}</p>
   </div>
 </template>
