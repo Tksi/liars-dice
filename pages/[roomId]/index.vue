@@ -157,25 +157,6 @@ const betForm = ref({ count: 1, face: 2 });
 const showBetForm = ref(false);
 
 /**
- * 有効なベットの最小値を計算
- */
-const getMinBet = computed(() => {
-  if (!room.value?.currentBet) {
-    return { count: 1, face: 2 };
-  }
-
-  const currentBet = room.value.currentBet;
-
-  return {
-    count:
-      betForm.value.face === currentBet.face
-        ? currentBet.count + 1
-        : currentBet.count,
-    face: currentBet.face,
-  };
-});
-
-/**
  * ベットが有効かどうかをチェック
  */
 const isBetValid = computed(() => {
@@ -253,6 +234,23 @@ onUnmounted(() => {
 <template>
   <div class="bg-gray-900 min-h-screen">
     <div class="max-w-7xl mx-auto px-4 py-6">
+      <!-- Header with Room Name and Back Button -->
+      <div class="flex h-8 items-center justify-between mb-4">
+        <button
+          v-if="room && room.gameStatus !== 'playing' && !showAllDice"
+          class="bg-gray-700 font-bold hover:bg-gray-600 px-3 py-2 rounded-lg text-gray-200 text-sm transition-colors w-10"
+          @click="() => navigateTo('/')"
+        >
+          ◀
+        </button>
+        <div v-else class="w-10"></div>
+        <!-- Spacer when back button is hidden -->
+        <h1 v-if="room" class="font-bold text-gray-100 text-xl">
+          {{ room.name }}
+        </h1>
+        <div class="w-10"></div>
+        <!-- Spacer for centering -->
+      </div>
       <!-- Waiting State - Participants List -->
       <div
         v-if="room && room.gameStatus === 'waiting'"
@@ -286,7 +284,7 @@ onUnmounted(() => {
             class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-lg text-white transition-colors"
             @click="() => startGame()"
           >
-            ゲーム開始
+            開始
           </button>
         </div>
       </div>
@@ -385,7 +383,9 @@ onUnmounted(() => {
 
             <!-- No Dice (Eliminated) -->
             <div v-else class="text-center">
-              <div class="bg-red-500 px-4 py-2 rounded text-white">脱落</div>
+              <div class="bg-red-500 font-bold px-4 py-2 rounded text-white">
+                脱落
+              </div>
             </div>
           </div>
         </div>
@@ -394,7 +394,7 @@ onUnmounted(() => {
       <!-- Challenge Result Summary -->
       <div
         v-if="showAllDice && room?.lastChallengeResult"
-        class="bg-gray-700 mb-4 p-3 rounded-lg"
+        class="bg-gray-800 mb-4 p-3 rounded-lg"
       >
         <div
           class="font-bold text-center text-xl"
@@ -423,19 +423,19 @@ onUnmounted(() => {
           currentUser.isMyTurn &&
           !showAllDice
         "
-        class="bg-gray-800 mb-4 p-4 rounded-lg"
+        class="bg-gray-800 flex justify-center mb-4 p-4 rounded-lg"
       >
         <!-- Action Buttons -->
         <div v-if="!showBetForm" class="flex gap-4">
           <button
-            class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg text-lg text-white transition-colors"
+            class="bg-blue-600 font-bold hover:bg-blue-700 px-4 py-2 rounded-lg text-lg text-white transition-colors"
             @click="() => (showBetForm = true)"
           >
             レイズ
           </button>
           <button
             v-if="room.currentBet"
-            class="bg-red-600 hover:bg-red-700 px-4 py-3 rounded-lg text-lg text-white transition-colors"
+            class="bg-red-600 font-bold hover:bg-red-700 px-4 py-2 rounded-lg text-lg text-white transition-colors"
             @click="() => makeChallenge()"
           >
             ダウト
@@ -443,8 +443,8 @@ onUnmounted(() => {
         </div>
 
         <!-- Bet Form -->
-        <div v-if="showBetForm" class="bg-gray-700 p-3 rounded-lg">
-          <div class="flex gap-3 items-center">
+        <div v-if="showBetForm">
+          <div class="flex gap-2 items-center">
             <select
               v-model="betForm.face"
               class="bg-gray-600 border border-gray-500 px-3 py-2 rounded text-base text-white"
@@ -457,32 +457,32 @@ onUnmounted(() => {
             </select>
 
             <span class="text-gray-200 text-lg">が</span>
-
             <div class="flex items-center">
               <button
-                class="bg-gray-600 border border-gray-500 hover:bg-gray-500 px-2 py-2 rounded-l text-white"
+                class="bg-gray-600 border border-gray-500 font-bold hover:bg-gray-500 px-3 py-2 rounded-l text-white"
                 :disabled="betForm.count <= 1"
                 @click="() => (betForm.count = Math.max(1, betForm.count - 1))"
               >
                 -
               </button>
               <p
-                class="bg-gray-600 border-gray-500 border-y px-3 py-2 text-base text-center text-white w-10"
+                class="bg-gray-600 border-gray-500 border-y px-2 py-2 text-base text-center text-white w-10"
               >
                 {{ betForm.count }}
               </p>
               <button
-                class="bg-gray-600 border border-gray-500 hover:bg-gray-500 px-2 py-2 rounded-r text-white"
+                class="bg-gray-600 border border-gray-500 font-bold hover:bg-gray-500 px-2 py-2 rounded-r text-white"
                 @click="() => (betForm.count = betForm.count + 1)"
               >
                 +
               </button>
             </div>
-
             <span class="text-gray-200 text-lg">個以上</span>
+          </div>
 
+          <div class="flex gap-3 justify-center mt-3">
             <button
-              class="px-4 py-3 rounded text-lg text-white transition-colors"
+              class="font-bold px-4 py-2 rounded text-lg text-white transition-colors"
               :class="{
                 'bg-blue-600 hover:bg-blue-700': isBetValid,
                 'bg-gray-500 cursor-not-allowed': !isBetValid,
@@ -498,7 +498,7 @@ onUnmounted(() => {
               ベット
             </button>
             <button
-              class="bg-gray-600 hover:bg-gray-700 px-4 py-3 rounded text-lg text-white transition-colors"
+              class="bg-gray-600 font-bold hover:bg-gray-700 px-4 py-2 rounded text-lg text-white transition-colors"
               @click="() => (showBetForm = false)"
             >
               キャンセル
@@ -515,7 +515,7 @@ onUnmounted(() => {
         <div class="text-center">
           <button
             v-if="canStartGame"
-            class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-lg text-white transition-colors"
+            class="bg-green-600 font-bold hover:bg-green-700 px-4 py-2 rounded-lg text-lg text-white transition-colors"
             @click="() => startGame()"
           >
             再戦

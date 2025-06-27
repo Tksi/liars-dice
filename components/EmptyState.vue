@@ -3,8 +3,6 @@
  * Props
  */
 type Props = {
-  title: string;
-  description: string;
   icon?: 'folder' | 'inbox';
 };
 
@@ -21,7 +19,7 @@ defineOptions({
 <template>
   <div class="p-8 text-center">
     <div
-      class="bg-gray-700 flex h-12 items-center justify-center mb-3 mx-auto rounded-full w-12"
+      class="bg-gray-700 flex h-12 items-center justify-center mx-auto rounded-full w-12"
     >
       <!-- Inbox Icon -->
       <svg
@@ -54,7 +52,5 @@ defineOptions({
         />
       </svg>
     </div>
-    <p class="mb-1 text-gray-300 text-lg">{{ title }}</p>
-    <p class="text-gray-400 text-base">{{ description }}</p>
   </div>
 </template>

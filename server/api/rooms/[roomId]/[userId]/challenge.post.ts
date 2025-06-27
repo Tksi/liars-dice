@@ -6,7 +6,7 @@ import { rooms } from '~/server/state/rooms';
 /**
  * チャレンジ結果を計算
  * @param room ルーム情報
- * @param challenger
+ * @param challenger チャレンジャー情報
  */
 const resolveChallenge = (
   room: ServerRoom,

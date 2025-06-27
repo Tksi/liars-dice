@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Room } from '~/types';
 
-const { localUser } = useLocalUser();
+useLocalUser();
 const rooms = ref<Room[]>([]);
 const isCreatingRoom = ref(false);
 
@@ -59,9 +59,11 @@ onMounted(() => {
 
 <template>
   <div class="bg-gray-900 min-h-screen">
-    <div class="max-w-4xl mx-auto px-4 py-6">
-      <UserCard v-if="localUser" :local-user="localUser" />
-
+    <div class="max-w-4xl mx-auto px-4 py-4">
+      <!-- Header -->
+      <div class="mb-5 text-center">
+        <h1 class="font-bold text-4xl text-white">Liar's Dice</h1>
+      </div>
       <div class="mb-6">
         <IconButton
           class="block mx-auto sm:w-auto w-full"
@@ -109,11 +111,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <EmptyState
-            v-if="rooms.length === 0"
-            description="新しいルームを作成してゲームを始めましょう！"
-            title="まだルームがありません"
-          />
+          <EmptyState v-if="rooms.length === 0" />
 
           <div
             v-if="rooms.length > 0"
