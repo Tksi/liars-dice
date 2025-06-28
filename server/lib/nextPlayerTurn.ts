@@ -14,7 +14,7 @@ const runtimeConfig = useRuntimeConfig();
  * 次のプレイヤーのターンに移す
  * @param room ルーム情報
  */
-export const nextPlayerTurn = (room: ServerRoom): void => {
+export const nextPlayerTurn = async (room: ServerRoom) => {
   const userIds = [...room.users.keys()];
   const aliveUserIds = getAlivePlayerIds(room);
 
@@ -53,7 +53,7 @@ export const nextPlayerTurn = (room: ServerRoom): void => {
 
       // CPUプレイヤーの場合、自動的に行動を実行
       if (nextPlayer.isCpu) {
-        void processCpuTurn(room, nextPlayer);
+        await processCpuTurn(room, nextPlayer);
       }
 
       break;
@@ -84,31 +84,33 @@ export const processCpuTurn = async (
 
   if (decision.action === 'challenge') {
     // チャレンジ処理
+    // 最初のターン（currentBetがnull）の場合はチャレンジできない
     if (!room.currentBet) {
+      console.error(
+        'CPU tried to challenge on first turn - this should not happen',
+      );
+
       return;
     }
 
-    const currentBet = room.currentBet;
     const challengeResult = resolveChallenge(room, cpuPlayer);
+    const bettor = room.users.get(room.currentBet.userId)!;
 
     // eslint-disable-next-line no-param-reassign
     room.lastChallengeResult = challengeResult;
+    // eslint-disable-next-line no-param-reassign
+    room.currentBet = null;
+    await sleep(runtimeConfig.public.challengeResultWaitTime);
+    room.lastChallengeResult = null; // 次のターンのためにリセット
 
+    // 新しいラウンドを開始
     if (challengeResult.success) {
       // チャレンジ成功: ベットしたプレイヤーがサイコロを失う
-      const bettor = room.users.get(currentBet.userId);
-
-      if (bettor) {
-        bettor.dice.pop();
-      }
+      bettor.dice.pop();
     } else {
       // チャレンジ失敗: チャレンジしたプレイヤーがサイコロを失う
       cpuPlayer.dice.pop();
     }
-
-    // 新しいラウンドを開始
-    // eslint-disable-next-line no-param-reassign
-    room.currentBet = null;
 
     // 全プレイヤーのサイコロを再振り
     for (const [, user] of room.users) {
@@ -117,25 +119,28 @@ export const processCpuTurn = async (
       }
     }
 
+    // 全プレイヤーのisMyTurnをリセット
+    resetPlayerTurns(room);
+
     // 負けたプレイヤーから次のラウンドを開始
-    const loserId = challengeResult.success ? currentBet.userId : cpuPlayer.id;
+    const loserId = challengeResult.success ? bettor.id : cpuPlayer.id;
     const loser = room.users.get(loserId);
 
-    if (loser !== undefined && loser.dice.length > 0) {
-      // 全プレイヤーのisMyTurnをリセット
-      resetPlayerTurns(room);
+    if (loser === undefined) {
+      throw new Error('Loser not found in room users');
+    }
 
-      // 負けたプレイヤーから開始
-      loser.isMyTurn = true;
+    // 負けたプレイヤーから開始
+    loser.isMyTurn = true;
 
+    if (loser.dice.length > 0) {
       // 負けたプレイヤーがCPUの場合、再度自動実行
       if (loser.isCpu === true) {
-        await sleep(runtimeConfig.public.challengeResultWaitTime);
-        void processCpuTurn(room, loser);
+        await processCpuTurn(room, loser);
       }
     } else {
       // 負けたプレイヤーが脱落した場合、次のプレイヤーから開始
-      nextPlayerTurn(room);
+      await nextPlayerTurn(room);
     }
   } else if (decision.bet) {
     // ベット処理
@@ -149,6 +154,6 @@ export const processCpuTurn = async (
     room.lastChallengeResult = null;
 
     // 次のプレイヤーのターンに移す
-    nextPlayerTurn(room);
+    await nextPlayerTurn(room);
   }
 };

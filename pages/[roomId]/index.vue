@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Room } from '~/types';
 
-const runtimeConfig = useRuntimeConfig();
 const route = useRoute('roomId');
 const roomId = route.params.roomId;
 const room = ref<Room | null>(null);
@@ -61,6 +60,8 @@ const connectToRoom = (): void => {
         face: data.currentBet?.face ?? 2,
       };
       showBetForm.value = false;
+      showAllDice.value = data.lastChallengeResult ? true : false;
+
       console.info(`[${timestamp}] パース済みデータ:`, data);
     } catch {
       console.error(`[${timestamp}] JSON パースに失敗しました`);
@@ -221,37 +222,6 @@ const isBetValid = computed(() => {
  * 全プレイヤーのサイコロ表示状態管理
  */
 const showAllDice = ref(false);
-const maskTimer = ref<NodeJS.Timeout | null>(null);
-
-/**
- * 全プレイヤーのサイコロマスクを一時的に解除
- */
-const showAllDiceTemporarily = (): void => {
-  showAllDice.value = true;
-
-  // 既存のタイマーをクリア
-  if (maskTimer.value) {
-    clearTimeout(maskTimer.value);
-  }
-
-  // 5秒後にマスク復帰
-  maskTimer.value = setTimeout(() => {
-    showAllDice.value = false;
-    maskTimer.value = null;
-  }, runtimeConfig.public.challengeResultWaitTime);
-};
-
-/**
- * ダウト結果の変更を監視
- */
-watch(
-  () => room.value?.lastChallengeResult,
-  (newResult) => {
-    if (newResult) {
-      showAllDiceTemporarily();
-    }
-  },
-);
 
 onMounted(() => {
   connectToRoom();
@@ -259,11 +229,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   disconnect();
-
-  // タイマーのクリーンアップ
-  if (maskTimer.value) {
-    clearTimeout(maskTimer.value);
-  }
 });
 </script>
 

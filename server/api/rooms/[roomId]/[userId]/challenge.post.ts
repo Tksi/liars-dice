@@ -29,15 +29,13 @@ export default defineEventHandler(async (event) => {
   }
 
   // チャレンジできるベットがあるかチェック
+  // 最初のターン（currentBetがnull）ではチャレンジできない
   if (!room.currentBet) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'No bet to challenge',
+      statusMessage: 'No bet to challenge - must bet first on initial turn',
     });
   }
-
-  // この時点でroom.currentBetはノンヌルが保証される
-  const currentBet = room.currentBet;
 
   // プレイヤーの存在チェック
   const challenger = room.users.get(userId);
@@ -66,23 +64,22 @@ export default defineEventHandler(async (event) => {
 
   // チャレンジ結果を計算（サイコロ再振り前に実行）
   const challengeResult = resolveChallenge(room, challenger);
+  const bettor = room.users.get(room.currentBet.userId)!;
+
   // チャレンジ結果をルームに保存（フロントエンドで表示するため）
   room.lastChallengeResult = challengeResult;
+  room.currentBet = null;
+  await sleep(runtimeConfig.public.challengeResultWaitTime);
+  room.lastChallengeResult = null; // 次のターンのためにリセット
 
+  // 新しいラウンドを開始
   if (challengeResult.success) {
     // チャレンジ成功: ベットしたプレイヤーがサイコロを失う
-    const bettor = room.users.get(currentBet.userId);
-
-    if (bettor) {
-      bettor.dice.pop();
-    }
+    bettor.dice.pop();
   } else {
     // チャレンジ失敗: チャレンジしたプレイヤーがサイコロを失う
     challenger.dice.pop();
   }
-
-  // 新しいラウンドを開始
-  room.currentBet = null;
 
   // 全プレイヤーのサイコロを再振り
   for (const [, user] of room.users) {
@@ -91,24 +88,27 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // 全プレイヤーのisMyTurnをリセット
+  resetPlayerTurns(room);
+
   // 負けたプレイヤーから次のラウンドを開始
-  const loserId = challengeResult.success ? currentBet.userId : userId;
+  const loserId = challengeResult.success ? bettor.id : challenger.id;
   const loser = room.users.get(loserId);
 
-  if (loser !== undefined && loser.dice.length > 0) {
-    // 全プレイヤーのisMyTurnをリセット
-    resetPlayerTurns(room);
+  if (loser === undefined) {
+    throw new Error('Loser not found in room users');
+  }
 
-    // 負けたプレイヤーから開始
-    loser.isMyTurn = true;
+  // 負けたプレイヤーから開始
+  loser.isMyTurn = true;
 
+  if (loser.dice.length > 0) {
     if (loser.isCpu === true) {
-      await sleep(runtimeConfig.public.challengeResultWaitTime);
-      void processCpuTurn(room, loser);
+      await processCpuTurn(room, loser);
     }
   } else {
     // 負けたプレイヤーが脱落した場合、次のプレイヤーから開始
-    nextPlayerTurn(room);
+    await nextPlayerTurn(room);
   }
 
   // レスポンスは空（SSEで状態更新される）

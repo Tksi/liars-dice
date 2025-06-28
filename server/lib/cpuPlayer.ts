@@ -155,7 +155,8 @@ export const decideCpuAction = (
     return { action: 'bet', bet: { count: 1, face: 2 } };
   }
 
-  // 最初のベットの場合
+  // 最初のベットの場合（currentBetがnull、またはundefined）
+  // この場合は必ずベットしなければならない
   if (!room.currentBet) {
     const bet = generateBet(null, cpuPlayer.dice, difficulty);
 

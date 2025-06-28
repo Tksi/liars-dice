@@ -6,7 +6,7 @@ import { rooms } from '~/server/state/rooms';
 /**
  * ゲーム開始処理
  */
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const roomId = decodeURIComponent(event.context.params!.roomId!);
   const room = rooms.get(roomId);
 
@@ -63,7 +63,7 @@ export default defineEventHandler((event) => {
 
   // 最初のプレイヤーがCPUの場合、自動的に行動を開始
   if (firstPlayer?.isCpu === true) {
-    void processCpuTurn(room, firstPlayer);
+    await processCpuTurn(room, firstPlayer);
   }
 
   // レスポンスは空（SSEで状態更新される）

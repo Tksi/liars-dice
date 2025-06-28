@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
   room.lastChallengeResult = null;
 
   // 次のプレイヤーのターンに移す
-  nextPlayerTurn(room);
+  await nextPlayerTurn(room);
 
   // レスポンスは空（SSEで状態更新される）
   return;
