@@ -17,6 +17,11 @@ export const nextPlayerTurn = (room: ServerRoom): void => {
     // eslint-disable-next-line no-param-reassign
     room.gameStatus = 'finished';
 
+    // 全プレイヤーのisMyTurnをfalseに
+    for (const [, player] of room.users) {
+      player.isMyTurn = false;
+    }
+
     return;
   }
 
