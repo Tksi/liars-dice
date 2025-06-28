@@ -369,7 +369,7 @@ onUnmounted(() => {
 
               <!-- Current Bet Display for the user who made the bet -->
               <div
-                v-if="room.currentBet?.userId === user.id"
+                v-if="room.currentBet?.userId === user.id && !showAllDice"
                 class="bg-blue-600 font-bold px-2 py-1 rounded text-base text-white"
               >
                 {{ room.currentBet.face }}が{{ room.currentBet.count }}個以上
@@ -377,7 +377,7 @@ onUnmounted(() => {
 
               <div
                 v-else-if="
-                  showAllDice === true &&
+                  showAllDice &&
                   room.lastChallengeResult?.raisedUserId === user.id
                 "
                 class="bg-blue-600 font-bold px-2 py-1 rounded text-base text-white"

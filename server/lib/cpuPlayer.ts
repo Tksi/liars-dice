@@ -1,3 +1,4 @@
+import { getAlivePlayers, validateGameState } from './gameUtils';
 import type { GameBet, ServerRoom, ServerUser } from '~/types';
 
 /**
@@ -150,11 +151,7 @@ export const decideCpuAction = (
   difficulty: CpuDifficulty = 'medium',
 ): CpuDecision => {
   // ゲーム状態チェック
-  if (
-    room.gameStatus !== 'playing' ||
-    !cpuPlayer.isMyTurn ||
-    cpuPlayer.dice.length === 0
-  ) {
+  if (!validateGameState(room, cpuPlayer)) {
     return { action: 'bet', bet: { count: 1, face: 2 } };
   }
 
@@ -166,9 +163,7 @@ export const decideCpuAction = (
   }
 
   // 生きているプレイヤー数と平均サイコロ数を計算
-  const alivePlayers = [...room.users.values()].filter(
-    (user) => user.dice.length > 0,
-  );
+  const alivePlayers = getAlivePlayers(room);
   const totalDice = alivePlayers.reduce(
     (sum, user) => sum + user.dice.length,
     0,
