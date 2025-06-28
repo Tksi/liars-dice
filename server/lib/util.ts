@@ -22,3 +22,12 @@ export const shuffleArray = <T>(array: T[]): T[] => {
 export const rollDice = (count: number): number[] => {
   return Array.from({ length: count }, () => Math.floor(Math.random() * 6) + 1);
 };
+
+/**
+ * 指定したミリ秒だけ待機する関数
+ * @param ms 待機時間（ミリ秒）
+ * @returns 待機後に解決されるPromise
+ */
+export const sleep = (ms: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};

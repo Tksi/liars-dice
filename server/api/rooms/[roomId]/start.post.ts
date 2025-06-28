@@ -1,4 +1,5 @@
 import type { ServerUser } from '~/types';
+import { processCpuTurn } from '~/server/lib/nextPlayerTurn';
 import { rollDice, shuffleArray } from '~/server/lib/util';
 import { rooms } from '~/server/state/rooms';
 
@@ -45,14 +46,25 @@ export default defineEventHandler((event) => {
 
   // 各プレイヤーにサイコロを配布し、ゲーム情報を設定
   let isFirstPlayer = true;
+  let firstPlayer: ServerUser | null = null;
 
   for (const [, user] of room.users) {
     user.dice = rollDice(5);
     user.isMyTurn = isFirstPlayer;
+
+    if (isFirstPlayer) {
+      firstPlayer = user;
+    }
+
     isFirstPlayer = false;
   }
 
   room.lastChallengeResult = null;
+
+  // 最初のプレイヤーがCPUの場合、自動的に行動を開始
+  if (firstPlayer?.isCpu === true) {
+    void processCpuTurn(room, firstPlayer);
+  }
 
   // レスポンスは空（SSEで状態更新される）
   return;

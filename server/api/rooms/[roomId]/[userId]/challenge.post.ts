@@ -1,7 +1,9 @@
 import type { ChallengeResult, ServerRoom, ServerUser } from '~/types';
-import { nextPlayerTurn } from '~/server/lib/nextPlayerTurn';
-import { rollDice } from '~/server/lib/util';
+import { nextPlayerTurn, processCpuTurn } from '~/server/lib/nextPlayerTurn';
+import { rollDice, sleep } from '~/server/lib/util';
 import { rooms } from '~/server/state/rooms';
+
+const runtimeConfig = useRuntimeConfig();
 
 /**
  * チャレンジ結果を計算
@@ -62,7 +64,7 @@ const resolveChallenge = (
 /**
  * チャレンジ処理
  */
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const roomId = decodeURIComponent(event.context.params!.roomId!);
   const userId = decodeURIComponent(event.context.params!.userId!);
   const room = rooms.get(roomId);
@@ -157,6 +159,11 @@ export default defineEventHandler((event) => {
 
     // 負けたプレイヤーから開始
     loser.isMyTurn = true;
+
+    if (loser.isCpu === true) {
+      await sleep(runtimeConfig.public.challengeResultWaitTime);
+      void processCpuTurn(room, loser);
+    }
   } else {
     // 負けたプレイヤーが脱落した場合、次のプレイヤーから開始
     nextPlayerTurn(room);

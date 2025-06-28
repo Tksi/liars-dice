@@ -25,6 +25,5 @@ export default defineEventHandler(() => {
     id: room.id,
     name: room.name,
     createdAt: room.createdAt,
-    userCount: 0,
   };
 });

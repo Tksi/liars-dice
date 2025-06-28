@@ -23,7 +23,9 @@ const createRoom = async (): Promise<void> => {
   isCreatingRoom.value = true;
 
   try {
-    const { id: roomId } = await $fetch('/api/rooms', { method: 'POST' });
+    const { id: roomId } = await $fetch('/api/rooms', {
+      method: 'POST',
+    });
     await joinRoom(roomId);
   } catch (err) {
     console.error('ルームの作成に失敗しました:', err);
@@ -64,29 +66,31 @@ onMounted(() => {
       <div class="mb-5 text-center">
         <h1 class="font-bold text-4xl text-white">Liar's Dice</h1>
       </div>
-      <div class="mb-6">
-        <IconButton
-          class="block mx-auto sm:w-auto w-full"
-          :disabled="isCreatingRoom"
-          @click="() => createRoom()"
-        >
-          <template #icon>
-            <svg
-              class="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-              />
-            </svg>
-          </template>
-          新しいルームを作成
-        </IconButton>
+      <div class="mb-6 space-y-3">
+        <div class="flex gap-3 justify-center">
+          <IconButton
+            class="sm:w-auto w-full"
+            :disabled="isCreatingRoom"
+            @click="() => createRoom()"
+          >
+            <template #icon>
+              <svg
+                class="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+            </template>
+            新しいルームを作成
+          </IconButton>
+        </div>
       </div>
 
       <!-- Room List -->

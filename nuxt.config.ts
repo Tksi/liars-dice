@@ -35,4 +35,10 @@ export default defineNuxtConfig({
       },
     },
   },
+  runtimeConfig: {
+    public: {
+      cpuWaitTime: 2000, // CPUの行動待機時間（ミリ秒）
+      challengeResultWaitTime: 5000, // チャレンジ結果の待機時間（ミリ秒）
+    },
+  },
 });

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Room } from '~/types';
 
+const runtimeConfig = useRuntimeConfig();
 const route = useRoute('roomId');
 const roomId = route.params.roomId;
 const room = ref<Room | null>(null);
@@ -101,6 +102,35 @@ const canStartGame = computed(() => {
 });
 
 /**
+ * CPUプレイヤーを追加
+ * @param count - 追加するCPU数
+ */
+const addCpuPlayers = async (count: number): Promise<void> => {
+  isAddingCpu.value = true;
+
+  try {
+    await $fetch(`/api/rooms/${roomId}/addCpu`, {
+      method: 'POST',
+      body: { count },
+    });
+  } catch (err) {
+    console.error('CPUプレイヤーの追加に失敗しました:', err);
+  } finally {
+    isAddingCpu.value = false;
+  }
+};
+
+/**
+ * CPU追加が可能かチェック
+ */
+const canAddCpu = computed(() => {
+  if (!room.value || room.value.gameStatus !== 'waiting') return false;
+  const currentPlayerCount = Object.keys(room.value.users).length;
+
+  return currentPlayerCount < 6; // 最大6人まで
+});
+
+/**
  * 現在のユーザーの情報を取得
  */
 const currentUser = computed(() => {
@@ -158,6 +188,11 @@ const betForm = ref({ count: 1, face: 2 });
 const showBetForm = ref(false);
 
 /**
+ * CPU追加の状態管理
+ */
+const isAddingCpu = ref(false);
+
+/**
  * ベットが有効かどうかをチェック
  */
 const isBetValid = computed(() => {
@@ -203,7 +238,7 @@ const showAllDiceTemporarily = (): void => {
   maskTimer.value = setTimeout(() => {
     showAllDice.value = false;
     maskTimer.value = null;
-  }, 7500);
+  }, runtimeConfig.public.challengeResultWaitTime);
 };
 
 /**
@@ -259,35 +294,50 @@ onUnmounted(() => {
         class="bg-gray-800 mb-4 p-4 rounded-lg"
       >
         <div class="gap-3 grid lg:grid-cols-3 md:grid-cols-2">
-          <div
+          <UserCard
             v-for="user in Object.values(room.users)"
             :key="user.id"
-            class="bg-gray-700 border border-gray-600 p-3 rounded-lg"
+            class="transition-opacity"
             :class="{ 'opacity-75': !user.isConnected }"
-          >
-            <div class="flex items-center space-x-2">
-              <div>
-                <p class="font-medium text-gray-100 text-lg">
-                  {{ user.name }}
-                  <span
-                    v-if="user.id === localUser.id"
-                    class="text-base text-gray-400"
-                    >(あなた)</span
-                  >
-                </p>
-              </div>
-            </div>
-          </div>
+            :user="user"
+          />
         </div>
 
-        <!-- Game Start Button -->
-        <div v-if="canStartGame" class="mt-4 text-center">
-          <button
-            class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-lg text-white transition-colors"
-            @click="() => startGame()"
-          >
-            開始
-          </button>
+        <!-- CPU追加とゲーム開始ボタン -->
+        <div class="mt-4 space-y-3">
+          <!-- CPU追加ボタン -->
+          <div v-if="canAddCpu" class="text-center">
+            <button
+              class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-white transition-colors"
+              :disabled="isAddingCpu"
+              @click="() => addCpuPlayers(1)"
+            >
+              <svg
+                class="h-5 inline mr-2 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                />
+              </svg>
+              {{ isAddingCpu ? 'CPU追加中...' : 'CPUを追加' }}
+            </button>
+          </div>
+
+          <!-- ゲーム開始ボタン -->
+          <div v-if="canStartGame" class="text-center">
+            <button
+              class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-lg text-white transition-colors"
+              @click="() => startGame()"
+            >
+              ゲーム開始
+            </button>
+          </div>
         </div>
       </div>
 

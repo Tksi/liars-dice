@@ -47,6 +47,7 @@ export default defineEventHandler(async (event) => {
       isMyTurn: false,
       dice: [],
       isConnected: true,
+      isCpu: false,
     });
   } else {
     if (existingUser == null) {

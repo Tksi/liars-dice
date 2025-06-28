@@ -38,6 +38,7 @@ export type ServerUser = {
   isMyTurn: boolean;
   dice: number[];
   isConnected: boolean;
+  isCpu: boolean;
 };
 
 /**
