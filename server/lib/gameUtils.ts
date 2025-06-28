@@ -1,4 +1,8 @@
+import { nextPlayerTurn, processCpuTurn } from './nextPlayerTurn';
+import { rollDice, sleep } from './util';
 import type { ChallengeResult, ServerRoom, ServerUser } from '@/types';
+
+const runtimeConfig = useRuntimeConfig();
 
 /**
  * チャレンジ結果を計算
@@ -100,4 +104,61 @@ export const validateGameState = (
   return (
     room.gameStatus === 'playing' && player.isMyTurn && player.dice.length > 0
   );
+};
+
+/**
+ * チャレンジ後の共通処理
+ * @param room ルーム情報
+ * @param challenger チャレンジャー情報
+ */
+export const processPostChallengeLogic = async (
+  room: ServerRoom,
+  challenger: ServerUser,
+): Promise<void> => {
+  const challengeResult = resolveChallenge(room, challenger);
+  const bettor = room.users.get(challengeResult.raisedUserId)!;
+
+  // チャレンジ結果をルームに保存（フロントエンドで表示するため）
+  // eslint-disable-next-line no-param-reassign
+  room.lastChallengeResult = challengeResult;
+  // eslint-disable-next-line no-param-reassign
+  room.currentBet = null;
+  await sleep(runtimeConfig.public.challengeResultWaitTime);
+  // eslint-disable-next-line no-param-reassign
+  room.lastChallengeResult = null; // 次のターンのためにリセット
+
+  // 新しいラウンドを開始
+  if (challengeResult.success) {
+    // チャレンジ成功: ベットしたプレイヤーがサイコロを失う
+    bettor.dice.pop();
+  } else {
+    // チャレンジ失敗: チャレンジしたプレイヤーがサイコロを失う
+    challenger.dice.pop();
+  }
+
+  // 全プレイヤーのサイコロを再振り
+  for (const [, user] of room.users) {
+    if (user !== undefined && user.dice.length > 0) {
+      user.dice = rollDice(user.dice.length);
+    }
+  }
+
+  // 全プレイヤーのisMyTurnをリセット
+  resetPlayerTurns(room);
+
+  // 負けたプレイヤーから次のラウンドを開始
+  const loserId = challengeResult.success ? bettor.id : challenger.id;
+  const loser = room.users.get(loserId)!;
+
+  // 負けたプレイヤーから開始
+  loser.isMyTurn = true;
+
+  if (loser.dice.length > 0) {
+    if (loser.isCpu === true) {
+      await processCpuTurn(room, loser);
+    }
+  } else {
+    // 負けたプレイヤーが脱落した場合、次のプレイヤーから開始
+    await nextPlayerTurn(room);
+  }
 };

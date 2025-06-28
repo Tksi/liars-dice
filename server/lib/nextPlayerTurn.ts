@@ -1,11 +1,11 @@
 import { decideCpuAction } from './cpuPlayer';
 import {
   getAlivePlayerIds,
+  processPostChallengeLogic,
   resetPlayerTurns,
-  resolveChallenge,
   validateGameState,
 } from './gameUtils';
-import { rollDice, sleep } from './util';
+import { sleep } from './util';
 import type { ServerRoom, ServerUser } from '@/types';
 
 const runtimeConfig = useRuntimeConfig();
@@ -83,65 +83,8 @@ export const processCpuTurn = async (
   const decision = decideCpuAction(room, cpuPlayer);
 
   if (decision.action === 'challenge') {
-    // チャレンジ処理
-    // 最初のターン（currentBetがnull）の場合はチャレンジできない
-    if (!room.currentBet) {
-      console.error(
-        'CPU tried to challenge on first turn - this should not happen',
-      );
-
-      return;
-    }
-
-    const challengeResult = resolveChallenge(room, cpuPlayer);
-    const bettor = room.users.get(room.currentBet.userId)!;
-
-    // eslint-disable-next-line no-param-reassign
-    room.lastChallengeResult = challengeResult;
-    // eslint-disable-next-line no-param-reassign
-    room.currentBet = null;
-    await sleep(runtimeConfig.public.challengeResultWaitTime);
-    room.lastChallengeResult = null; // 次のターンのためにリセット
-
-    // 新しいラウンドを開始
-    if (challengeResult.success) {
-      // チャレンジ成功: ベットしたプレイヤーがサイコロを失う
-      bettor.dice.pop();
-    } else {
-      // チャレンジ失敗: チャレンジしたプレイヤーがサイコロを失う
-      cpuPlayer.dice.pop();
-    }
-
-    // 全プレイヤーのサイコロを再振り
-    for (const [, user] of room.users) {
-      if (user !== undefined && user.dice.length > 0) {
-        user.dice = rollDice(user.dice.length);
-      }
-    }
-
-    // 全プレイヤーのisMyTurnをリセット
-    resetPlayerTurns(room);
-
-    // 負けたプレイヤーから次のラウンドを開始
-    const loserId = challengeResult.success ? bettor.id : cpuPlayer.id;
-    const loser = room.users.get(loserId);
-
-    if (loser === undefined) {
-      throw new Error('Loser not found in room users');
-    }
-
-    // 負けたプレイヤーから開始
-    loser.isMyTurn = true;
-
-    if (loser.dice.length > 0) {
-      // 負けたプレイヤーがCPUの場合、再度自動実行
-      if (loser.isCpu === true) {
-        await processCpuTurn(room, loser);
-      }
-    } else {
-      // 負けたプレイヤーが脱落した場合、次のプレイヤーから開始
-      await nextPlayerTurn(room);
-    }
+    // チャレンジ後の共通処理を実行
+    await processPostChallengeLogic(room, cpuPlayer);
   } else if (decision.bet) {
     // ベット処理
     // eslint-disable-next-line no-param-reassign

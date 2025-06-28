@@ -1,9 +1,5 @@
-import { resetPlayerTurns, resolveChallenge } from '~/server/lib/gameUtils';
-import { nextPlayerTurn, processCpuTurn } from '~/server/lib/nextPlayerTurn';
-import { rollDice, sleep } from '~/server/lib/util';
+import { processPostChallengeLogic } from '~/server/lib/gameUtils';
 import { rooms } from '~/server/state/rooms';
-
-const runtimeConfig = useRuntimeConfig();
 
 /**
  * チャレンジ処理
@@ -62,54 +58,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // チャレンジ結果を計算（サイコロ再振り前に実行）
-  const challengeResult = resolveChallenge(room, challenger);
-  const bettor = room.users.get(room.currentBet.userId)!;
-
-  // チャレンジ結果をルームに保存（フロントエンドで表示するため）
-  room.lastChallengeResult = challengeResult;
-  room.currentBet = null;
-  await sleep(runtimeConfig.public.challengeResultWaitTime);
-  room.lastChallengeResult = null; // 次のターンのためにリセット
-
-  // 新しいラウンドを開始
-  if (challengeResult.success) {
-    // チャレンジ成功: ベットしたプレイヤーがサイコロを失う
-    bettor.dice.pop();
-  } else {
-    // チャレンジ失敗: チャレンジしたプレイヤーがサイコロを失う
-    challenger.dice.pop();
-  }
-
-  // 全プレイヤーのサイコロを再振り
-  for (const [, user] of room.users) {
-    if (user !== undefined && user.dice.length > 0) {
-      user.dice = rollDice(user.dice.length);
-    }
-  }
-
-  // 全プレイヤーのisMyTurnをリセット
-  resetPlayerTurns(room);
-
-  // 負けたプレイヤーから次のラウンドを開始
-  const loserId = challengeResult.success ? bettor.id : challenger.id;
-  const loser = room.users.get(loserId);
-
-  if (loser === undefined) {
-    throw new Error('Loser not found in room users');
-  }
-
-  // 負けたプレイヤーから開始
-  loser.isMyTurn = true;
-
-  if (loser.dice.length > 0) {
-    if (loser.isCpu === true) {
-      await processCpuTurn(room, loser);
-    }
-  } else {
-    // 負けたプレイヤーが脱落した場合、次のプレイヤーから開始
-    await nextPlayerTurn(room);
-  }
+  await processPostChallengeLogic(room, challenger);
 
   // レスポンスは空（SSEで状態更新される）
   return;
