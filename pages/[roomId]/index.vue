@@ -234,7 +234,7 @@ onUnmounted(() => {
 
 <template>
   <div class="bg-gray-900 min-h-screen">
-    <div class="max-w-7xl mx-auto px-4 py-6">
+    <div v-auto-animate class="max-w-7xl mx-auto px-4 py-6">
       <!-- Header with Room Name and Back Button -->
       <div class="flex h-8 items-center justify-between mb-4">
         <button
@@ -255,6 +255,7 @@ onUnmounted(() => {
       <!-- Waiting State - Participants List -->
       <div
         v-if="room && room.gameStatus === 'waiting'"
+        v-auto-animate
         class="bg-gray-800 mb-4 p-4 rounded-lg"
       >
         <div class="gap-3 grid lg:grid-cols-3 md:grid-cols-2">
@@ -349,6 +350,7 @@ onUnmounted(() => {
               class="text-center"
             >
               <div
+                v-auto-animate
                 class="flex flex-wrap font-mono gap-1 justify-center mb-2 text-2xl"
               >
                 <span
@@ -410,7 +412,7 @@ onUnmounted(() => {
           "
         >
           {{
-            `${room.lastChallengeResult.challengedUserName}のダウト${room.lastChallengeResult.success ? '成功！' : '失敗！'}`
+            `${room.lastChallengeResult.challengedUserId === localUser.id ? '' : room.lastChallengeResult.challengedUserName + 'の'}ダウト${room.lastChallengeResult.success ? '成功！' : '失敗！'}`
           }}
         </div>
       </div>
