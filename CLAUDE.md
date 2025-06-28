@@ -117,7 +117,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `POST /api/rooms/[roomId]/start` - ゲーム開始（プレイヤー順序シャッフル、サイコロ配布）
   - `POST /api/rooms/[roomId]/[userId]/bet` - ベット実行（ベット有効性チェック付き）
   - `POST /api/rooms/[roomId]/[userId]/challenge` - チャレンジ実行（結果計算、サイコロ再配布）
+  - `POST /api/rooms/[roomId]/addCpu` - CPUプレイヤー追加（1-3体、ゲーム開始前のみ）
 - **エラーハンドリング**: Zodバリデーションエラー統一処理
+
+#### CPUプレイヤー機能
+
+- **CPUプレイヤー追加**: ルーム参加前にCPUプレイヤーを1-3体追加可能
+- **思考レベル設定**: easy/medium/hard の3段階難易度システム
+- **確率論的思考**: ワイルドカード考慮、期待値ベースの戦略的判断
+- **自動ターン処理**: CPUプレイヤーのターン時に自動的にベット・チャレンジ実行
+- **設定可能な待機時間**: CPUの行動速度調整（デフォルト2秒）
 
 ### 🎯 新規実装機能
 
@@ -125,74 +134,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **ゲーム状態管理**: サイコロ配布、ベット、チャレンジ機能
 - **プレイヤー管理**: ターン制御、プレイヤー順序管理、脱落処理
 - **ゲーム進行**: ラウンド管理、勝敗判定、ゲーム終了処理
-
-### ❌ 未実装機能
-
-- **ゲームUI**: 実際のゲームプレイ画面（フロントエンド）
-- **ゲーム開始UI**: ゲーム開始ボタンの実装
-- **ベット・チャレンジUI**: プレイヤーアクション入力画面
-
-### ⚠️ 技術的課題
-
-#### 型定義の不整合と詳細
-
-**サーバーサイド型（`/types/index.ts`）:**
-
-```typescript
-// ゲーム関連の型
-type GameBet = {
-  count: number;
-  face: number;
-  userId: string;
-};
-
-type GameStatus = 'waiting' | 'playing' | 'finished';
-
-type ChallengeResult = {
-  success: boolean;
-  actualCount: number;
-  expectedCount: number;
-  face: number;
-  allUsersDice: Record<string, { name: string; dice: number[] }>;
-};
-
-// サーバーサイドで使用される型
-type ServerUser = {
-  id: string;
-  stream: EventStream; // SSE接続オブジェクト
-  name: string;
-  isMyTurn: boolean;
-  dice: number[];
-  isConnected: boolean;
-};
-
-type ServerRoom = {
-  id: string;
-  name: string;
-  createdAt: number;
-  users: Map<string, ServerUser>; // Map構造
-  gameStatus: GameStatus;
-  currentBet: GameBet | null;
-  lastChallengeResult: ChallengeResult | null;
-};
-```
-
-**フロントエンド型（同じファイル内で変換）:**
-
-```typescript
-// フロントエンドに送信される型
-type User = Omit<ServerUser, 'stream'>; // streamプロパティを除去
-
-type Room = Omit<ServerRoom, 'users'> & {
-  users: Record<string, User>; // MapをRecord型に変換
-};
-```
-
-**型変換の課題:**
-
-- サーバーサイドのMap構造をフロントエンドのRecord型に変換が必要
-- `replacer.ts` でMapのシリアライゼーション処理
-- SSE経由で送信時に型の自動変換が行われる
 
 ## サーバーサイドアーキテクチャ
 
@@ -235,6 +176,7 @@ type Room = Omit<ServerRoom, 'users'> & {
 - `POST /api/rooms/[roomId]/start` - ゲーム開始（2人以上必要、プレイヤー順序ランダム化）
 - `POST /api/rooms/[roomId]/[userId]/bet` - ベット実行（ターンチェック、ベット有効性検証）
 - `POST /api/rooms/[roomId]/[userId]/challenge` - チャレンジ実行（結果計算、負けプレイヤー処理）
+- `POST /api/rooms/[roomId]/addCpu` - CPUプレイヤー追加（1-3体、ゲーム開始前のみ）
 
 ### SSE（Server-Sent Events）実装詳細
 
@@ -297,6 +239,27 @@ type Room = Omit<ServerRoom, 'users'> & {
 - チャレンジ結果計算（ワイルドカード含む）
 - ラウンド終了後の自動サイコロ再配布
 
+### CPUプレイヤーシステム
+
+**思考エンジン (`server/lib/cpuPlayer.ts`):**
+
+- 確率計算による戦略的判断（ワイルドカード1の目を考慮）
+- 難易度別のチャレンジ閾値設定（easy: 0.2, medium: 0.4, hard: 0.6）
+- 自分のサイコロ分析に基づく最適ベット生成
+- ランダム要素を含む意思決定でゲーム性向上
+
+**自動ターン処理:**
+
+- `nextPlayerTurn.ts` でCPUターン時の自動実行
+- `processCpuTurn()` による非同期処理
+- 設定可能な待機時間でゲームテンポ調整
+
+**CPUプレイヤー管理:**
+
+- ダミーSSEストリームによる通常プレイヤーとの統一処理
+- `isCpu` フラグによる識別
+- 最大6プレイヤー制限内での柔軟な追加
+
 ### 制限事項
 
 - メモリ内状態のため、サーバー再起動で状態が消失
@@ -337,3 +300,11 @@ type Room = Omit<ServerRoom, 'users'> & {
 - デバウンス機能により短時間での重複ブロードキャストを防止
 - 大量のユーザー接続時は `Promise.all()` による並列処理でスループット向上
 - フロントエンドの1秒間隔での自動更新は本番環境では調整が必要
+
+### CPUプレイヤー関連の注意点
+
+- CPUプレイヤーはゲーム開始前（`waiting`状態）のみ追加可能
+- 最大6プレイヤー制限内でのみ追加可能
+- CPUの行動待機時間は `nuxt.config.ts` の `cpuWaitTime` で調整
+- CPUプレイヤーも通常プレイヤーと同じゲームロジックを使用
+- ダミーSSEストリームによりブロードキャスト処理を統一
