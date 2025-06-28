@@ -59,6 +59,7 @@ const connectToRoom = (): void => {
         count: data.currentBet?.count ?? 1,
         face: data.currentBet?.face ?? 2,
       };
+      showBetForm.value = false;
       console.info(`[${timestamp}] パース済みデータ:`, data);
     } catch {
       console.error(`[${timestamp}] JSON パースに失敗しました`);
@@ -449,11 +450,15 @@ onUnmounted(() => {
               v-model="betForm.face"
               class="bg-gray-600 border border-gray-500 px-3 py-2 rounded text-base text-white"
             >
-              <option :value="2">2</option>
-              <option :value="3">3</option>
-              <option :value="4">4</option>
-              <option :value="5">5</option>
-              <option :value="6">6</option>
+              <template v-for="face in 6">
+                <option
+                  v-if="face >= (room.currentBet?.face ?? 2)"
+                  :key="face"
+                  :value="face"
+                >
+                  {{ face }}
+                </option>
+              </template>
             </select>
 
             <span class="text-gray-200 text-lg">が</span>
@@ -491,7 +496,6 @@ onUnmounted(() => {
               @click="
                 () => {
                   makeBet(betForm.count, betForm.face);
-                  showBetForm = false;
                 }
               "
             >
